@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Search, 
   ShoppingCart, 
@@ -9,6 +9,7 @@ import {
   FileText, 
   User,
   LogOut,
+  LogIn,
   Wallet,
   Eye,
   EyeOff
@@ -17,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { useCart } from '@/contexts/CartContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -33,11 +35,19 @@ const formatBalance = (amount: number, show: boolean) => {
 
 export function Header() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { itemCount, total } = useCart();
+  const { isAuthenticated, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showBalance, setShowBalance] = useState(true);
 
   const balance = 11767.75;
+
+  const handleLogout = () => {
+    logout();
+    setMobileMenuOpen(false);
+    navigate('/login');
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-card shadow-sm">
@@ -109,7 +119,18 @@ export function Header() {
             </Button>
           </Link>
 
-          {/* Mobile menu */}
+          {/* Auth button - desktop */}
+          {isAuthenticated ? (
+            <Button variant="ghost" size="icon" className="hidden md:flex" onClick={handleLogout}>
+              <LogOut className="h-5 w-5" />
+            </Button>
+          ) : (
+            <Button variant="ghost" size="icon" className="hidden md:flex" asChild>
+              <Link to="/login">
+                <LogIn className="h-5 w-5" />
+              </Link>
+            </Button>
+          )}
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild className="md:hidden">
               <Button variant="ghost" size="icon">
@@ -161,12 +182,32 @@ export function Header() {
                   })}
                 </nav>
 
-                {/* Logout */}
+                {/* Auth button - mobile */}
                 <div className="mt-auto pt-4 border-t">
-                  <Button variant="ghost" size="lg" className="w-full justify-start gap-3 text-destructive">
-                    <LogOut className="h-5 w-5" />
-                    تسجيل الخروج
-                  </Button>
+                  {isAuthenticated ? (
+                    <Button 
+                      variant="ghost" 
+                      size="lg" 
+                      className="w-full justify-start gap-3 text-destructive"
+                      onClick={handleLogout}
+                    >
+                      <LogOut className="h-5 w-5" />
+                      تسجيل الخروج
+                    </Button>
+                  ) : (
+                    <SheetClose asChild>
+                      <Link to="/login">
+                        <Button 
+                          variant="ghost" 
+                          size="lg" 
+                          className="w-full justify-start gap-3"
+                        >
+                          <LogIn className="h-5 w-5" />
+                          تسجيل الدخول
+                        </Button>
+                      </Link>
+                    </SheetClose>
+                  )}
                 </div>
               </div>
             </SheetContent>
