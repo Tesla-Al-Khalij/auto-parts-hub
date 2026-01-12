@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -40,6 +40,8 @@ import {
 import { mockParts } from '@/data/mockData';
 import { Part } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { useTableControls } from '@/hooks/useTableControls';
+import { DataTablePagination, SortableHeader } from '@/components/ui/data-table-controls';
 
 const categories = [
   { value: 'engine', label: 'المحرك' },
@@ -57,7 +59,6 @@ const categories = [
 const AdminParts = () => {
   const { toast } = useToast();
   const [parts, setParts] = useState<Part[]>(mockParts);
-  const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingPart, setEditingPart] = useState<Part | null>(null);
@@ -72,24 +73,33 @@ const AdminParts = () => {
     unit: 'قطعة',
   });
 
-  const filteredParts = useMemo(() => {
-    let results = parts;
-    
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      results = results.filter(p => 
-        p.partNumber.toLowerCase().includes(query) ||
-        p.name.toLowerCase().includes(query) ||
-        p.nameAr.includes(searchQuery)
-      );
-    }
-    
-    if (categoryFilter !== 'all') {
-      results = results.filter(p => p.category === categoryFilter);
-    }
-    
-    return results;
-  }, [parts, searchQuery, categoryFilter]);
+  // Filter by category first
+  const categoryFilteredParts = categoryFilter === 'all' 
+    ? parts 
+    : parts.filter(p => p.category === categoryFilter);
+
+  // Use table controls for pagination, sorting, and search
+  const {
+    paginatedData,
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    setPageSize,
+    totalPages,
+    totalItems,
+    startIndex,
+    endIndex,
+    sortConfig,
+    handleSort,
+    searchQuery,
+    setSearchQuery,
+  } = useTableControls<Part>({
+    data: categoryFilteredParts,
+    initialPageSize: 10,
+    initialSortKey: 'partNumber',
+    initialSortDirection: 'asc',
+    searchableFields: ['partNumber', 'name', 'nameAr', 'brand'],
+  });
 
   const resetForm = () => {
     setFormData({
@@ -185,14 +195,16 @@ const AdminParts = () => {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold flex items-center gap-2">
-              <Package className="h-8 w-8" />
-              إدارة القطع
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              إجمالي {parts.length} قطعة
-            </p>
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/10">
+              <Package className="h-8 w-8 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold">إدارة القطع</h1>
+              <p className="text-muted-foreground">
+                إجمالي {parts.length} قطعة
+              </p>
+            </div>
           </div>
           
           <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
@@ -200,7 +212,7 @@ const AdminParts = () => {
             if (!open) resetForm();
           }}>
             <DialogTrigger asChild>
-              <Button className="gap-2">
+              <Button className="gap-2 shadow-md">
                 <Plus className="h-4 w-4" />
                 إضافة قطعة
               </Button>
@@ -336,20 +348,20 @@ const AdminParts = () => {
         </div>
 
         {/* Filters */}
-        <Card>
-          <CardContent className="pt-6">
+        <Card className="border-0 shadow-md">
+          <CardContent className="p-4">
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="relative flex-1">
                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="بحث برقم القطعة أو الاسم..."
+                  placeholder="بحث برقم القطعة أو الاسم أو الماركة..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pr-10"
+                  className="pr-10 bg-background"
                 />
               </div>
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectTrigger className="w-full sm:w-[200px] bg-background">
                   <Filter className="h-4 w-4 ml-2" />
                   <SelectValue placeholder="جميع التصنيفات" />
                 </SelectTrigger>
@@ -367,24 +379,59 @@ const AdminParts = () => {
         </Card>
 
         {/* Parts Table */}
-        <Card>
+        <Card className="border-0 shadow-md overflow-hidden">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-right">رقم القطعة</TableHead>
-                    <TableHead className="text-right">الاسم</TableHead>
-                    <TableHead className="text-right">الماركة</TableHead>
+                  <TableRow className="bg-muted/50 hover:bg-muted/50">
+                    <TableHead className="text-right">
+                      <SortableHeader
+                        label="رقم القطعة"
+                        sortKey="partNumber"
+                        sortConfig={sortConfig}
+                        onSort={handleSort}
+                      />
+                    </TableHead>
+                    <TableHead className="text-right">
+                      <SortableHeader
+                        label="الاسم"
+                        sortKey="nameAr"
+                        sortConfig={sortConfig}
+                        onSort={handleSort}
+                      />
+                    </TableHead>
+                    <TableHead className="text-right">
+                      <SortableHeader
+                        label="الماركة"
+                        sortKey="brand"
+                        sortConfig={sortConfig}
+                        onSort={handleSort}
+                      />
+                    </TableHead>
                     <TableHead className="text-right">التصنيف</TableHead>
-                    <TableHead className="text-right">السعر</TableHead>
-                    <TableHead className="text-right">المخزون</TableHead>
+                    <TableHead className="text-right">
+                      <SortableHeader
+                        label="السعر"
+                        sortKey="price"
+                        sortConfig={sortConfig}
+                        onSort={handleSort}
+                      />
+                    </TableHead>
+                    <TableHead className="text-right">
+                      <SortableHeader
+                        label="المخزون"
+                        sortKey="stock"
+                        sortConfig={sortConfig}
+                        onSort={handleSort}
+                      />
+                    </TableHead>
                     <TableHead className="text-right">الإجراءات</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredParts.slice(0, 20).map((part) => (
-                    <TableRow key={part.id}>
+                  {paginatedData.map((part) => (
+                    <TableRow key={part.id} className="hover:bg-muted/30 transition-colors">
                       <TableCell className="font-mono text-sm">{part.partNumber}</TableCell>
                       <TableCell>
                         <div>
@@ -396,17 +443,18 @@ const AdminParts = () => {
                       <TableCell>
                         <Badge variant="secondary">{getCategoryLabel(part.category)}</Badge>
                       </TableCell>
-                      <TableCell>{part.price.toFixed(2)} ر.س</TableCell>
+                      <TableCell className="font-medium">{part.price.toFixed(2)} ر.س</TableCell>
                       <TableCell>
                         <Badge variant={part.stock <= 0 ? 'destructive' : part.stock <= 10 ? 'outline' : 'default'}>
                           {part.stock} {part.unit}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
                           <Button
                             variant="ghost"
                             size="icon"
+                            className="h-8 w-8"
                             onClick={() => handleEdit(part)}
                           >
                             <Pencil className="h-4 w-4" />
@@ -414,7 +462,7 @@ const AdminParts = () => {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="text-destructive hover:text-destructive"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
                             onClick={() => handleDelete(part.id)}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -426,11 +474,17 @@ const AdminParts = () => {
                 </TableBody>
               </Table>
             </div>
-            {filteredParts.length > 20 && (
-              <div className="p-4 text-center text-muted-foreground border-t">
-                عرض 20 من {filteredParts.length} قطعة
-              </div>
-            )}
+            
+            <DataTablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              startIndex={startIndex}
+              endIndex={endIndex}
+              onPageChange={setCurrentPage}
+              pageSize={pageSize}
+              onPageSizeChange={setPageSize}
+            />
           </CardContent>
         </Card>
       </div>

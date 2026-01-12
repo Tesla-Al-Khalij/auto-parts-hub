@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,6 +36,8 @@ import {
 import { mockOrders } from '@/data/mockData';
 import { Order, OrderStatus } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { useTableControls } from '@/hooks/useTableControls';
+import { DataTablePagination, SortableHeader } from '@/components/ui/data-table-controls';
 
 const statusLabels: Record<OrderStatus, string> = {
   pending: 'قيد الانتظار',
@@ -56,27 +58,37 @@ const statusColors: Record<OrderStatus, string> = {
 const AdminOrders = () => {
   const { toast } = useToast();
   const [orders, setOrders] = useState<Order[]>(mockOrders);
-  const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
-  const filteredOrders = useMemo(() => {
-    let results = orders;
-    
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      results = results.filter(o => 
-        o.orderNumber.toLowerCase().includes(query)
-      );
-    }
-    
-    if (statusFilter !== 'all') {
-      results = results.filter(o => o.status === statusFilter);
-    }
-    
-    return results;
-  }, [orders, searchQuery, statusFilter]);
+  // Filter by status first
+  const statusFilteredOrders = statusFilter === 'all'
+    ? orders
+    : orders.filter(o => o.status === statusFilter);
+
+  // Use table controls
+  const {
+    paginatedData,
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    setPageSize,
+    totalPages,
+    totalItems,
+    startIndex,
+    endIndex,
+    sortConfig,
+    handleSort,
+    searchQuery,
+    setSearchQuery,
+  } = useTableControls<Order>({
+    data: statusFilteredOrders,
+    initialPageSize: 10,
+    initialSortKey: 'date',
+    initialSortDirection: 'desc',
+    searchableFields: ['orderNumber'],
+  });
 
   const handleStatusChange = (orderId: string, newStatus: OrderStatus) => {
     setOrders(prev => prev.map(o => 
@@ -97,19 +109,21 @@ const AdminOrders = () => {
     <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <ShoppingCart className="h-8 w-8" />
-            إدارة الطلبات
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            إجمالي {orders.length} طلب
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/10">
+            <ShoppingCart className="h-8 w-8 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold">إدارة الطلبات</h1>
+            <p className="text-muted-foreground">
+              إجمالي {orders.length} طلب
+            </p>
+          </div>
         </div>
 
         {/* Filters */}
-        <Card>
-          <CardContent className="pt-6">
+        <Card className="border-0 shadow-md">
+          <CardContent className="p-4">
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="relative flex-1">
                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -117,11 +131,11 @@ const AdminOrders = () => {
                   placeholder="بحث برقم الطلب..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pr-10"
+                  className="pr-10 bg-background"
                 />
               </div>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectTrigger className="w-full sm:w-[200px] bg-background">
                   <Filter className="h-4 w-4 ml-2" />
                   <SelectValue placeholder="جميع الحالات" />
                 </SelectTrigger>
@@ -139,23 +153,44 @@ const AdminOrders = () => {
         </Card>
 
         {/* Orders Table */}
-        <Card>
+        <Card className="border-0 shadow-md overflow-hidden">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-right">رقم الطلب</TableHead>
-                    <TableHead className="text-right">التاريخ</TableHead>
+                  <TableRow className="bg-muted/50 hover:bg-muted/50">
+                    <TableHead className="text-right">
+                      <SortableHeader
+                        label="رقم الطلب"
+                        sortKey="orderNumber"
+                        sortConfig={sortConfig}
+                        onSort={handleSort}
+                      />
+                    </TableHead>
+                    <TableHead className="text-right">
+                      <SortableHeader
+                        label="التاريخ"
+                        sortKey="date"
+                        sortConfig={sortConfig}
+                        onSort={handleSort}
+                      />
+                    </TableHead>
                     <TableHead className="text-right">عدد القطع</TableHead>
-                    <TableHead className="text-right">الإجمالي</TableHead>
+                    <TableHead className="text-right">
+                      <SortableHeader
+                        label="الإجمالي"
+                        sortKey="total"
+                        sortConfig={sortConfig}
+                        onSort={handleSort}
+                      />
+                    </TableHead>
                     <TableHead className="text-right">الحالة</TableHead>
                     <TableHead className="text-right">الإجراءات</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredOrders.map((order) => (
-                    <TableRow key={order.id}>
+                  {paginatedData.map((order) => (
+                    <TableRow key={order.id} className="hover:bg-muted/30 transition-colors">
                       <TableCell className="font-mono font-medium">
                         {order.orderNumber}
                         {order.isDraft && (
@@ -188,6 +223,7 @@ const AdminOrders = () => {
                         <Button
                           variant="ghost"
                           size="icon"
+                          className="h-8 w-8"
                           onClick={() => handleViewDetails(order)}
                         >
                           <Eye className="h-4 w-4" />
@@ -198,6 +234,17 @@ const AdminOrders = () => {
                 </TableBody>
               </Table>
             </div>
+            
+            <DataTablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              startIndex={startIndex}
+              endIndex={endIndex}
+              onPageChange={setCurrentPage}
+              pageSize={pageSize}
+              onPageSizeChange={setPageSize}
+            />
           </CardContent>
         </Card>
 
