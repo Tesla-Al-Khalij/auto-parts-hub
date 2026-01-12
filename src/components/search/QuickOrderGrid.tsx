@@ -331,8 +331,8 @@ export function QuickOrderGrid() {
                   }, 200);
                 }}
                 placeholder="ادخل رقم القطعة..."
-                className="h-9 text-sm font-mono"
-                dir="ltr"
+                className="h-9 text-sm font-mono text-right"
+                dir="rtl"
               />
               
               {/* Suggestions dropdown */}
@@ -420,15 +420,15 @@ export function QuickOrderGrid() {
               )}
             </div>
 
-            {/* Quantity */}
+            {/* Quantity - editable input */}
             <Input
               id={`qty-${index}`}
               type="number"
-              min="1"
-              value={line.quantity || ''}
+              min="0"
+              value={line.quantity === 0 ? '' : line.quantity}
               onChange={e => handleQuantityChange(index, e.target.value)}
               onKeyDown={e => handleKeyDown(e, index, 'quantity')}
-              disabled={!line.part}
+              placeholder="0"
               className="h-9 text-sm text-center"
             />
 
