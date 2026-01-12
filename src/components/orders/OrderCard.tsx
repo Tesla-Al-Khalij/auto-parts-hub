@@ -86,7 +86,7 @@ export function OrderCard({ order }: OrderCardProps) {
           ) : (
             <Link to={`/orders/${order.id}`} className="w-full">
               <Button variant="outline" className="w-full h-12 gap-2">
-                عرض التفاصيل
+                عرض التفاصيل والتتبع
                 <ChevronLeft className="h-4 w-4" />
               </Button>
             </Link>
