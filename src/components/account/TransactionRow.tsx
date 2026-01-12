@@ -35,10 +35,10 @@ export function TransactionRow({ transaction }: TransactionRowProps) {
   });
 
   return (
-    <div className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors rounded-lg">
+    <div className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors rounded-lg" dir="rtl">
       {/* Icon */}
       <div className={cn(
-        'flex h-12 w-12 items-center justify-center rounded-full',
+        'flex h-12 w-12 items-center justify-center rounded-full shrink-0',
         transaction.amount > 0 ? 'bg-success/10' : 'bg-destructive/10'
       )}>
         <Icon className={cn('h-6 w-6', config.colorClass)} />
@@ -58,14 +58,14 @@ export function TransactionRow({ transaction }: TransactionRowProps) {
           </span>
         </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>{transaction.reference}</span>
+          <span dir="ltr">{transaction.reference}</span>
           <span>•</span>
           <span>{formattedDate}</span>
         </div>
       </div>
 
       {/* Amount */}
-      <div className="text-left">
+      <div className="text-left shrink-0" dir="ltr">
         <p className={cn(
           'text-lg font-bold',
           transaction.amount > 0 ? 'text-success' : 'text-destructive'
