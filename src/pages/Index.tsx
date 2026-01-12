@@ -1,9 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { PartSearchBar } from '@/components/search/PartSearchBar';
 import { PartCard } from '@/components/search/PartCard';
 import { mockParts } from '@/data/mockData';
-import { Package, Search, Filter } from 'lucide-react';
+import { Package, Search, Filter, ChevronRight, ChevronLeft } from 'lucide-react';
 import { useDebounce } from '@/hooks/useDebounce';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +17,7 @@ import {
 
 // Get unique categories from parts
 const categories = [...new Set(mockParts.map(p => p.category))];
+const ITEMS_PER_PAGE = 10;
 
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -24,6 +25,7 @@ const Index = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [stockFilter, setStockFilter] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Debounce search query for performance
   const debouncedSearch = useDebounce(searchQuery, 300);
@@ -68,6 +70,18 @@ const Index = () => {
     }
 
     return results;
+  }, [debouncedSearch, bulkPartNumbers, selectedCategory, stockFilter]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredParts.length / ITEMS_PER_PAGE);
+  const paginatedParts = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredParts.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredParts, currentPage]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
   }, [debouncedSearch, bulkPartNumbers, selectedCategory, stockFilter]);
 
   const handleBulkImport = (partNumbers: string[]) => {
@@ -238,12 +252,71 @@ const Index = () => {
           )}
 
           {/* Parts grid */}
-          {filteredParts.length > 0 && (
-            <div className="grid gap-4">
-              {filteredParts.map((part) => (
-                <PartCard key={part.id} part={part} />
-              ))}
-            </div>
+          {paginatedParts.length > 0 && (
+            <>
+              <div className="grid gap-4">
+                {paginatedParts.map((part) => (
+                  <PartCard key={part.id} part={part} />
+                ))}
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-2 pt-6">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
+                      // Show first, last, current, and adjacent pages
+                      const showPage = page === 1 || 
+                        page === totalPages || 
+                        Math.abs(page - currentPage) <= 1;
+                      
+                      const showEllipsis = page === 2 && currentPage > 3 ||
+                        page === totalPages - 1 && currentPage < totalPages - 2;
+
+                      if (showEllipsis && !showPage) {
+                        return <span key={page} className="px-2 text-muted-foreground">...</span>;
+                      }
+
+                      if (!showPage) return null;
+
+                      return (
+                        <Button
+                          key={page}
+                          variant={currentPage === page ? 'default' : 'outline'}
+                          size="icon"
+                          className="w-10 h-10"
+                          onClick={() => setCurrentPage(page)}
+                        >
+                          {page}
+                        </Button>
+                      );
+                    })}
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+
+                  <span className="text-sm text-muted-foreground mr-4">
+                    صفحة {currentPage} من {totalPages}
+                  </span>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
