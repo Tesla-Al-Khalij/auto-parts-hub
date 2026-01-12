@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Package, Search, X, Calendar, Plus, LayoutGrid, Table2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { OrderCard } from '@/components/orders/OrderCard';
 import { OrdersTable } from '@/components/orders/OrdersTable';
+import { DataTablePagination } from '@/components/ui/data-table-controls';
 import { mockOrders } from '@/data/mockData';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
@@ -22,41 +23,76 @@ export default function Orders() {
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
   const [dateTo, setDateTo] = useState<Date | undefined>();
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const clearFilters = () => {
     setSearchQuery('');
     setStatusFilter('all');
     setDateFrom(undefined);
     setDateTo(undefined);
+    setCurrentPage(1);
   };
 
   const hasActiveFilters = searchQuery || statusFilter !== 'all' || dateFrom || dateTo;
 
-  const filteredOrders = mockOrders.filter(order => {
-    // Search filter
-    const matchesSearch = !searchQuery || 
-      order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.items.some(item => 
-        item.partNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.name.includes(searchQuery)
-      );
+  const filteredOrders = useMemo(() => {
+    return mockOrders.filter(order => {
+      // Search filter
+      const matchesSearch = !searchQuery || 
+        order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        order.items.some(item => 
+          item.partNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          item.name.includes(searchQuery)
+        );
 
-    // Tab filter
-    let matchesTab = true;
-    if (activeTab === 'drafts') matchesTab = order.isDraft;
-    else if (activeTab === 'active') matchesTab = !order.isDraft && ['pending', 'confirmed', 'shipped'].includes(order.status);
-    else if (activeTab === 'completed') matchesTab = ['delivered', 'cancelled'].includes(order.status);
+      // Tab filter
+      let matchesTab = true;
+      if (activeTab === 'drafts') matchesTab = order.isDraft;
+      else if (activeTab === 'active') matchesTab = !order.isDraft && ['pending', 'confirmed', 'shipped'].includes(order.status);
+      else if (activeTab === 'completed') matchesTab = ['delivered', 'cancelled'].includes(order.status);
 
-    // Status filter
-    const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
+      // Status filter
+      const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
 
-    // Date filter
-    const orderDate = new Date(order.date);
-    const matchesDateFrom = !dateFrom || orderDate >= dateFrom;
-    const matchesDateTo = !dateTo || orderDate <= dateTo;
+      // Date filter
+      const orderDate = new Date(order.date);
+      const matchesDateFrom = !dateFrom || orderDate >= dateFrom;
+      const matchesDateTo = !dateTo || orderDate <= dateTo;
 
-    return matchesSearch && matchesTab && matchesStatus && matchesDateFrom && matchesDateTo;
-  });
+      return matchesSearch && matchesTab && matchesStatus && matchesDateFrom && matchesDateTo;
+    });
+  }, [searchQuery, activeTab, statusFilter, dateFrom, dateTo]);
+
+  // Paginated orders
+  const totalItems = filteredOrders.length;
+  const totalPages = Math.ceil(totalItems / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalItems);
+  const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    setCurrentPage(1);
+  };
+
+  const handleStatusChange = (value: string) => {
+    setStatusFilter(value);
+    setCurrentPage(1);
+  };
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    setCurrentPage(1);
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setCurrentPage(1);
+  };
 
   const draftsCount = mockOrders.filter(o => o.isDraft).length;
   const activeCount = mockOrders.filter(o => !o.isDraft && ['pending', 'confirmed', 'shipped'].includes(o.status)).length;
@@ -92,7 +128,7 @@ export default function Orders() {
             <Input
               placeholder="ابحث برقم الطلب أو رقم القطعة..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="h-14 pr-14 text-lg"
             />
             {searchQuery && (
@@ -100,7 +136,7 @@ export default function Orders() {
                 variant="ghost"
                 size="icon"
                 className="absolute left-2 top-1/2 -translate-y-1/2"
-                onClick={() => setSearchQuery('')}
+                onClick={() => handleSearchChange('')}
               >
                 <X className="h-5 w-5" />
               </Button>
@@ -111,7 +147,7 @@ export default function Orders() {
           <div className="flex flex-wrap gap-3 items-center justify-between">
             <div className="flex flex-wrap gap-3">
               {/* Status filter */}
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select value={statusFilter} onValueChange={handleStatusChange}>
                 <SelectTrigger className="w-[180px] h-12">
                   <SelectValue placeholder="حالة الطلب" />
                 </SelectTrigger>
@@ -137,7 +173,7 @@ export default function Orders() {
                   <CalendarComponent
                     mode="single"
                     selected={dateFrom}
-                    onSelect={setDateFrom}
+                    onSelect={(date) => { setDateFrom(date); setCurrentPage(1); }}
                     initialFocus
                   />
                 </PopoverContent>
@@ -155,7 +191,7 @@ export default function Orders() {
                   <CalendarComponent
                     mode="single"
                     selected={dateTo}
-                    onSelect={setDateTo}
+                    onSelect={(date) => { setDateTo(date); setCurrentPage(1); }}
                     initialFocus
                   />
                 </PopoverContent>
@@ -183,7 +219,7 @@ export default function Orders() {
         </div>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl">
+        <Tabs value={activeTab} onValueChange={handleTabChange} dir="rtl">
           <TabsList className="w-full h-auto p-1 grid grid-cols-4">
             <TabsTrigger value="all" className="h-12 text-base">
               الكل ({mockOrders.length})
@@ -200,23 +236,32 @@ export default function Orders() {
           </TabsList>
 
           <TabsContent value={activeTab} className="mt-6">
-            {/* Results count */}
-            {filteredOrders.length > 0 && (
-              <p className="text-muted-foreground mb-4">
-                عدد النتائج: <strong>{filteredOrders.length}</strong> طلب
-              </p>
-            )}
-
             {filteredOrders.length > 0 ? (
-              viewMode === 'cards' ? (
-                <div className="grid gap-4 md:grid-cols-2">
-                  {filteredOrders.map(order => (
-                    <OrderCard key={order.id} order={order} />
-                  ))}
+              <div className="space-y-4">
+                {viewMode === 'cards' ? (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {paginatedOrders.map(order => (
+                      <OrderCard key={order.id} order={order} />
+                    ))}
+                  </div>
+                ) : (
+                  <OrdersTable orders={paginatedOrders} />
+                )}
+                
+                {/* Pagination */}
+                <div className="bg-card rounded-lg border shadow-sm">
+                  <DataTablePagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={totalItems}
+                    startIndex={startIndex}
+                    endIndex={endIndex}
+                    onPageChange={setCurrentPage}
+                    pageSize={pageSize}
+                    onPageSizeChange={handlePageSizeChange}
+                  />
                 </div>
-              ) : (
-                <OrdersTable orders={filteredOrders} />
-              )
+              </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <Package className="h-16 w-16 text-muted-foreground/40 mb-4" />

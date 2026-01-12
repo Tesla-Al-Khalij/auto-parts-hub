@@ -18,6 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TransactionRow } from '@/components/account/TransactionRow';
+import { DataTablePagination } from '@/components/ui/data-table-controls';
 import { mockTransactions, mockUserProfile } from '@/data/mockData';
 import {
   Select,
@@ -72,6 +73,10 @@ export default function Account() {
   const [activeTab, setActiveTab] = useState('all');
   const [yearFilter, setYearFilter] = useState<string>('all');
   const [monthFilter, setMonthFilter] = useState<string>('all');
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // Available years from transactions
   const years = useMemo(() => {
@@ -101,6 +106,35 @@ export default function Account() {
     // Sort by date descending
     return results.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [activeTab, yearFilter, monthFilter]);
+
+  // Paginated transactions
+  const totalItems = filteredTransactions.length;
+  const totalPages = Math.ceil(totalItems / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalItems);
+  const paginatedTransactions = filteredTransactions.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    setCurrentPage(1);
+  };
+
+  const handleYearChange = (value: string) => {
+    setYearFilter(value);
+    setCurrentPage(1);
+  };
+
+  const handleMonthChange = (value: string) => {
+    setMonthFilter(value);
+    setCurrentPage(1);
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setCurrentPage(1);
+  };
+
 
   // Calculate totals for filtered period
   const periodStats = useMemo(() => {
@@ -365,7 +399,7 @@ export default function Account() {
               {/* Date filters */}
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
-                <Select value={yearFilter} onValueChange={setYearFilter}>
+                <Select value={yearFilter} onValueChange={handleYearChange}>
                   <SelectTrigger className="w-[120px] h-9">
                     <SelectValue placeholder="السنة" />
                   </SelectTrigger>
@@ -377,7 +411,7 @@ export default function Account() {
                   </SelectContent>
                 </Select>
                 
-                <Select value={monthFilter} onValueChange={setMonthFilter}>
+                <Select value={monthFilter} onValueChange={handleMonthChange}>
                   <SelectTrigger className="w-[120px] h-9">
                     <SelectValue placeholder="الشهر" />
                   </SelectTrigger>
@@ -394,8 +428,8 @@ export default function Account() {
                     variant="ghost"
                     size="sm"
                     onClick={() => {
-                      setYearFilter('all');
-                      setMonthFilter('all');
+                      handleYearChange('all');
+                      handleMonthChange('all');
                     }}
                   >
                     مسح
@@ -405,7 +439,7 @@ export default function Account() {
             </div>
           </CardHeader>
           <CardContent>
-            <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl">
+            <Tabs value={activeTab} onValueChange={handleTabChange} dir="rtl">
               <TabsList className="w-full h-auto p-1 grid grid-cols-4 mb-6">
                 <TabsTrigger value="all" className="h-12 text-base">
                   الكل
@@ -428,16 +462,27 @@ export default function Account() {
                     <p>لا توجد معاملات في هذه الفترة</p>
                   </div>
                 ) : (
-                  <>
-                    <div className="text-sm text-muted-foreground mb-4">
-                      عدد المعاملات: <strong className="text-foreground">{filteredTransactions.length}</strong>
-                    </div>
+                  <div className="space-y-4">
                     <div className="divide-y divide-border">
-                      {filteredTransactions.map(transaction => (
+                      {paginatedTransactions.map(transaction => (
                         <TransactionRow key={transaction.id} transaction={transaction} />
                       ))}
                     </div>
-                  </>
+                    
+                    {/* Pagination */}
+                    <div className="border-t pt-4">
+                      <DataTablePagination
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        totalItems={totalItems}
+                        startIndex={startIndex}
+                        endIndex={endIndex}
+                        onPageChange={setCurrentPage}
+                        pageSize={pageSize}
+                        onPageSizeChange={handlePageSizeChange}
+                      />
+                    </div>
+                  </div>
                 )}
               </TabsContent>
             </Tabs>
