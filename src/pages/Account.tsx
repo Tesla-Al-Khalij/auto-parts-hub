@@ -405,7 +405,7 @@ export default function Account() {
             </div>
           </CardHeader>
           <CardContent>
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl">
               <TabsList className="w-full h-auto p-1 grid grid-cols-4 mb-6">
                 <TabsTrigger value="all" className="h-12 text-base">
                   الكل
