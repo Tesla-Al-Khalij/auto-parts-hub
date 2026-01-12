@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -37,6 +37,8 @@ import {
 import { mockSuppliers } from '@/data/mockData';
 import { Supplier } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { useTableControls } from '@/hooks/useTableControls';
+import { DataTablePagination, SortableHeader } from '@/components/ui/data-table-controls';
 
 // Extended supplier type for admin
 interface ExtendedSupplier extends Supplier {
@@ -62,7 +64,6 @@ const extendedMockSuppliers: ExtendedSupplier[] = mockSuppliers.map((s, index) =
 const AdminSuppliers = () => {
   const { toast } = useToast();
   const [suppliers, setSuppliers] = useState<ExtendedSupplier[]>(extendedMockSuppliers);
-  const [searchQuery, setSearchQuery] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<ExtendedSupplier | null>(null);
   const [formData, setFormData] = useState({
@@ -76,16 +77,28 @@ const AdminSuppliers = () => {
     notes: '',
   });
 
-  const filteredSuppliers = useMemo(() => {
-    if (!searchQuery) return suppliers;
-    
-    const query = searchQuery.toLowerCase();
-    return suppliers.filter(s => 
-      s.name.toLowerCase().includes(query) ||
-      s.nameAr.includes(searchQuery) ||
-      s.email?.toLowerCase().includes(query)
-    );
-  }, [suppliers, searchQuery]);
+  // Use table controls
+  const {
+    paginatedData,
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    setPageSize,
+    totalPages,
+    totalItems,
+    startIndex,
+    endIndex,
+    sortConfig,
+    handleSort,
+    searchQuery,
+    setSearchQuery,
+  } = useTableControls<ExtendedSupplier>({
+    data: suppliers,
+    initialPageSize: 10,
+    initialSortKey: 'nameAr',
+    initialSortDirection: 'asc',
+    searchableFields: ['name', 'nameAr', 'email', 'city'],
+  });
 
   const resetForm = () => {
     setFormData({
@@ -172,14 +185,16 @@ const AdminSuppliers = () => {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold flex items-center gap-2">
-              <Truck className="h-8 w-8" />
-              إدارة الموردين
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              إجمالي {suppliers.length} مورد
-            </p>
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/10">
+              <Truck className="h-8 w-8 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold">إدارة الموردين</h1>
+              <p className="text-muted-foreground">
+                إجمالي {suppliers.length} مورد
+              </p>
+            </div>
           </div>
           
           <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
@@ -187,7 +202,7 @@ const AdminSuppliers = () => {
             if (!open) resetForm();
           }}>
             <DialogTrigger asChild>
-              <Button className="gap-2">
+              <Button className="gap-2 shadow-md">
                 <Plus className="h-4 w-4" />
                 إضافة مورد
               </Button>
@@ -306,37 +321,51 @@ const AdminSuppliers = () => {
         </div>
 
         {/* Search */}
-        <Card>
-          <CardContent className="pt-6">
+        <Card className="border-0 shadow-md">
+          <CardContent className="p-4">
             <div className="relative">
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="بحث بالاسم أو البريد..."
+                placeholder="بحث بالاسم أو البريد أو المدينة..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pr-10"
+                className="pr-10 bg-background"
               />
             </div>
           </CardContent>
         </Card>
 
         {/* Suppliers Table */}
-        <Card>
+        <Card className="border-0 shadow-md overflow-hidden">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-right">المورد</TableHead>
+                  <TableRow className="bg-muted/50 hover:bg-muted/50">
+                    <TableHead className="text-right">
+                      <SortableHeader
+                        label="المورد"
+                        sortKey="nameAr"
+                        sortConfig={sortConfig}
+                        onSort={handleSort}
+                      />
+                    </TableHead>
                     <TableHead className="text-right">التواصل</TableHead>
-                    <TableHead className="text-right">المدينة</TableHead>
+                    <TableHead className="text-right">
+                      <SortableHeader
+                        label="المدينة"
+                        sortKey="city"
+                        sortConfig={sortConfig}
+                        onSort={handleSort}
+                      />
+                    </TableHead>
                     <TableHead className="text-right">الحالة</TableHead>
                     <TableHead className="text-right">الإجراءات</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredSuppliers.map((supplier) => (
-                    <TableRow key={supplier.id}>
+                  {paginatedData.map((supplier) => (
+                    <TableRow key={supplier.id} className="hover:bg-muted/30 transition-colors">
                       <TableCell>
                         <div>
                           <p className="font-medium">{supplier.nameAr}</p>
@@ -383,10 +412,11 @@ const AdminSuppliers = () => {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
                           <Button
                             variant="ghost"
                             size="icon"
+                            className="h-8 w-8"
                             onClick={() => handleEdit(supplier)}
                           >
                             <Pencil className="h-4 w-4" />
@@ -394,7 +424,7 @@ const AdminSuppliers = () => {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="text-destructive hover:text-destructive"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
                             onClick={() => handleDelete(supplier.id)}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -406,6 +436,17 @@ const AdminSuppliers = () => {
                 </TableBody>
               </Table>
             </div>
+            
+            <DataTablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              startIndex={startIndex}
+              endIndex={endIndex}
+              onPageChange={setCurrentPage}
+              pageSize={pageSize}
+              onPageSizeChange={setPageSize}
+            />
           </CardContent>
         </Card>
       </div>
