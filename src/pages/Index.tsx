@@ -116,6 +116,22 @@ const Index = () => {
     setCurrentPage(1);
   }, [debouncedSearch, bulkPartNumbers, selectedCategory, stockFilter, sortBy]);
 
+  // Keyboard shortcuts for view switching
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.altKey && e.key === '1') {
+        e.preventDefault();
+        setViewMode('search');
+      } else if (e.altKey && e.key === '2') {
+        e.preventDefault();
+        setViewMode('grid');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const handleBulkImport = (partNumbers: string[]) => {
     setBulkPartNumbers(partNumbers);
     setSearchQuery('');
