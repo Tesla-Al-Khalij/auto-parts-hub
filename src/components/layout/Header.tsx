@@ -12,7 +12,8 @@ import {
   LogIn,
   Wallet,
   Eye,
-  EyeOff
+  EyeOff,
+  RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -87,8 +88,19 @@ export function Header() {
           })}
         </nav>
 
-        {/* Cart & Balance */}
+        {/* Actions: Refresh, Cart & Balance */}
         <div className="flex items-center gap-2">
+          {/* Refresh button */}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => window.location.reload()}
+            title="تحديث الصفحة"
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <RefreshCw className="h-5 w-5" />
+          </Button>
+
           {/* Balance indicator - shows debt amount */}
           <div className={`hidden sm:flex items-center gap-2 rounded-lg px-3 py-2 ${balance < 0 ? 'bg-destructive/10' : 'bg-success/10'}`}>
             <button
