@@ -68,4 +68,6 @@ export interface UserProfile {
   taxNumber?: string;
   balance: number;
   creditLimit: number;
+  creditTermDays: 60 | 90; // Payment terms in days
+  usedCredit: number; // Current used credit amount
 }
