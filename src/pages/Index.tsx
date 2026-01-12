@@ -10,6 +10,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -185,21 +191,37 @@ const Index = () => {
 
         {/* View Mode Toggle */}
         <div className="flex justify-center">
-          <ToggleGroup 
-            type="single" 
-            value={viewMode} 
-            onValueChange={(value) => value && setViewMode(value as ViewMode)}
-            className="bg-secondary/50 p-1 rounded-lg"
-          >
-            <ToggleGroupItem value="search" className="gap-2 px-4">
-              <Search className="h-4 w-4" />
-              بحث عادي
-            </ToggleGroupItem>
-            <ToggleGroupItem value="grid" className="gap-2 px-4">
-              <Table2 className="h-4 w-4" />
-              طلب سريع
-            </ToggleGroupItem>
-          </ToggleGroup>
+          <TooltipProvider delayDuration={300}>
+            <ToggleGroup 
+              type="single" 
+              value={viewMode} 
+              onValueChange={(value) => value && setViewMode(value as ViewMode)}
+              className="bg-secondary/50 p-1 rounded-lg"
+            >
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <ToggleGroupItem value="search" className="gap-2 px-4">
+                    <Search className="h-4 w-4" />
+                    بحث عادي
+                  </ToggleGroupItem>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Alt + 1</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <ToggleGroupItem value="grid" className="gap-2 px-4">
+                    <Table2 className="h-4 w-4" />
+                    طلب سريع
+                  </ToggleGroupItem>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Alt + 2</p>
+                </TooltipContent>
+              </Tooltip>
+            </ToggleGroup>
+          </TooltipProvider>
         </div>
 
         {/* Quick Order Grid Mode */}
