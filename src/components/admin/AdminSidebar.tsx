@@ -9,7 +9,10 @@ import {
   ChevronRight,
   ChevronLeft,
   Warehouse,
-  Shield
+  Shield,
+  Store,
+  PanelRightClose,
+  PanelRightOpen
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import {
@@ -24,7 +27,8 @@ import {
   SidebarTrigger,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
 
 const menuItems = [
   { title: 'لوحة التحكم', url: '/admin', icon: LayoutDashboard },
@@ -46,33 +50,58 @@ export function AdminSidebar() {
     <Sidebar 
       side="right"
       collapsible="icon"
-      className="border-l border-border"
+      className="border-l-0 bg-sidebar"
     >
-      <div className="flex items-center justify-between p-4 border-b border-border">
+      {/* Header */}
+      <div className={cn(
+        "flex items-center gap-3 p-4 bg-gradient-to-l from-primary/5 to-transparent",
+        isCollapsed ? "justify-center" : "justify-between"
+      )}>
         {!isCollapsed && (
-          <h2 className="text-lg font-bold text-primary">لوحة الإدارة</h2>
+          <div className="flex items-center gap-2">
+            <span className="text-xl font-bold text-primary">لوحة الإدارة</span>
+          </div>
         )}
-        <SidebarTrigger className={isCollapsed ? 'mx-auto' : ''}>
-          {isCollapsed ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+        <SidebarTrigger className="h-8 w-8 rounded-lg hover:bg-sidebar-accent transition-colors">
+          {isCollapsed ? (
+            <PanelRightOpen className="h-4 w-4 text-sidebar-foreground/70" />
+          ) : (
+            <PanelRightClose className="h-4 w-4 text-sidebar-foreground/70" />
+          )}
         </SidebarTrigger>
       </div>
 
-      <SidebarContent>
+      <Separator className="bg-sidebar-border" />
+
+      <SidebarContent className="px-2 py-4">
         <SidebarGroup>
-          {!isCollapsed && <SidebarGroupLabel>القائمة الرئيسية</SidebarGroupLabel>}
+          {!isCollapsed && (
+            <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/50 px-3 mb-2">
+              القائمة الرئيسية
+            </SidebarGroupLabel>
+          )}
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="space-y-1">
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild tooltip={isCollapsed ? item.title : undefined}>
                     <NavLink 
                       to={item.url} 
                       end={item.url === '/admin'}
-                      className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent transition-colors"
-                      activeClassName="bg-primary/10 text-primary font-medium"
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200",
+                        "text-sidebar-foreground/70 hover:text-sidebar-foreground",
+                        "hover:bg-sidebar-accent/50",
+                        isCollapsed && "justify-center px-2"
+                      )}
+                      activeClassName="bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground font-medium shadow-sm"
                     >
-                      <item.icon className="h-5 w-5 shrink-0" />
-                      {!isCollapsed && <span>{item.title}</span>}
+                      <item.icon className={cn(
+                        "h-5 w-5 shrink-0 transition-colors",
+                      )} />
+                      {!isCollapsed && (
+                        <span className="text-sm">{item.title}</span>
+                      )}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -82,15 +111,27 @@ export function AdminSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      {/* Back to store link */}
-      <div className="mt-auto p-4 border-t border-border">
-        <NavLink 
-          to="/" 
-          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ChevronRight className="h-4 w-4" />
-          {!isCollapsed && <span>العودة للمتجر</span>}
-        </NavLink>
+      {/* Footer - Back to store */}
+      <div className="mt-auto">
+        <Separator className="bg-sidebar-border" />
+        <div className="p-3">
+          <NavLink 
+            to="/" 
+            className={cn(
+              "flex items-center gap-2 px-3 py-2.5 rounded-lg transition-all duration-200",
+              "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50",
+              isCollapsed && "justify-center px-2"
+            )}
+          >
+            <Store className="h-4 w-4 shrink-0" />
+            {!isCollapsed && (
+              <>
+                <span className="text-sm">العودة للمتجر</span>
+                <ChevronLeft className="h-4 w-4 mr-auto" />
+              </>
+            )}
+          </NavLink>
+        </div>
       </div>
     </Sidebar>
   );
