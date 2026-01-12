@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Package, Search, X, Calendar, Plus, ArrowLeft } from 'lucide-react';
+import { Package, Search, X, Calendar, Plus, LayoutGrid, Table2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { Input } from '@/components/ui/input';
@@ -9,9 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { OrderCard } from '@/components/orders/OrderCard';
+import { OrdersTable } from '@/components/orders/OrdersTable';
 import { mockOrders } from '@/data/mockData';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 export default function Orders() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -19,6 +21,7 @@ export default function Orders() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
   const [dateTo, setDateTo] = useState<Date | undefined>();
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
 
   const clearFilters = () => {
     setSearchQuery('');
@@ -105,70 +108,82 @@ export default function Orders() {
           </div>
 
           {/* Filter row */}
-          <div className="flex flex-wrap gap-3">
-            {/* Status filter */}
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px] h-12">
-                <SelectValue placeholder="حالة الطلب" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">جميع الحالات</SelectItem>
-                <SelectItem value="pending">قيد الانتظار</SelectItem>
-                <SelectItem value="confirmed">تم التأكيد</SelectItem>
-                <SelectItem value="shipped">تم الشحن</SelectItem>
-                <SelectItem value="delivered">تم التسليم</SelectItem>
-                <SelectItem value="cancelled">ملغي</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="flex flex-wrap gap-3 items-center justify-between">
+            <div className="flex flex-wrap gap-3">
+              {/* Status filter */}
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[180px] h-12">
+                  <SelectValue placeholder="حالة الطلب" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">جميع الحالات</SelectItem>
+                  <SelectItem value="pending">قيد الانتظار</SelectItem>
+                  <SelectItem value="confirmed">تم التأكيد</SelectItem>
+                  <SelectItem value="shipped">تم الشحن</SelectItem>
+                  <SelectItem value="delivered">تم التسليم</SelectItem>
+                  <SelectItem value="cancelled">ملغي</SelectItem>
+                </SelectContent>
+              </Select>
 
-            {/* Date from */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="h-12 gap-2 min-w-[160px] justify-start">
-                  <Calendar className="h-5 w-5" />
-                  {dateFrom ? format(dateFrom, 'dd/MM/yyyy', { locale: ar }) : 'من تاريخ'}
+              {/* Date from */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="h-12 gap-2 min-w-[160px] justify-start">
+                    <Calendar className="h-5 w-5" />
+                    {dateFrom ? format(dateFrom, 'dd/MM/yyyy', { locale: ar }) : 'من تاريخ'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={dateFrom}
+                    onSelect={setDateFrom}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+
+              {/* Date to */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="h-12 gap-2 min-w-[160px] justify-start">
+                    <Calendar className="h-5 w-5" />
+                    {dateTo ? format(dateTo, 'dd/MM/yyyy', { locale: ar }) : 'إلى تاريخ'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={dateTo}
+                    onSelect={setDateTo}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+
+              {/* Clear filters */}
+              {hasActiveFilters && (
+                <Button variant="ghost" onClick={clearFilters} className="h-12 text-destructive">
+                  <X className="h-4 w-4 ml-2" />
+                  مسح الفلاتر
                 </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <CalendarComponent
-                  mode="single"
-                  selected={dateFrom}
-                  onSelect={setDateFrom}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+              )}
+            </div>
 
-            {/* Date to */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="h-12 gap-2 min-w-[160px] justify-start">
-                  <Calendar className="h-5 w-5" />
-                  {dateTo ? format(dateTo, 'dd/MM/yyyy', { locale: ar }) : 'إلى تاريخ'}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <CalendarComponent
-                  mode="single"
-                  selected={dateTo}
-                  onSelect={setDateTo}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-
-            {/* Clear filters */}
-            {hasActiveFilters && (
-              <Button variant="ghost" onClick={clearFilters} className="h-12 text-destructive">
-                <X className="h-4 w-4 ml-2" />
-                مسح الفلاتر
-              </Button>
-            )}
+            {/* View mode toggle */}
+            <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as 'cards' | 'table')}>
+              <ToggleGroupItem value="cards" aria-label="عرض البطاقات" className="h-12 px-4">
+                <LayoutGrid className="h-5 w-5" />
+              </ToggleGroupItem>
+              <ToggleGroupItem value="table" aria-label="عرض الجدول" className="h-12 px-4">
+                <Table2 className="h-5 w-5" />
+              </ToggleGroupItem>
+            </ToggleGroup>
           </div>
         </div>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl">
           <TabsList className="w-full h-auto p-1 grid grid-cols-4">
             <TabsTrigger value="all" className="h-12 text-base">
               الكل ({mockOrders.length})
@@ -193,11 +208,15 @@ export default function Orders() {
             )}
 
             {filteredOrders.length > 0 ? (
-              <div className="grid gap-4 md:grid-cols-2">
-                {filteredOrders.map(order => (
-                  <OrderCard key={order.id} order={order} />
-                ))}
-              </div>
+              viewMode === 'cards' ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {filteredOrders.map(order => (
+                    <OrderCard key={order.id} order={order} />
+                  ))}
+                </div>
+              ) : (
+                <OrdersTable orders={filteredOrders} />
+              )
             ) : (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <Package className="h-16 w-16 text-muted-foreground/40 mb-4" />
