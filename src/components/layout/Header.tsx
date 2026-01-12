@@ -42,6 +42,15 @@ export function Header() {
   const { isAuthenticated, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showBalance, setShowBalance] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    // Small delay to show animation before reload
+    setTimeout(() => {
+      window.location.reload();
+    }, 500);
+  };
 
   const balance = -38232.25; // سالب = مديونية على العميل
 
@@ -94,11 +103,12 @@ export function Header() {
           <Button 
             variant="ghost" 
             size="icon" 
-            onClick={() => window.location.reload()}
+            onClick={handleRefresh}
+            disabled={isRefreshing}
             title="تحديث الصفحة"
             className="text-muted-foreground hover:text-foreground"
           >
-            <RefreshCw className="h-5 w-5" />
+            <RefreshCw className={`h-5 w-5 transition-transform ${isRefreshing ? 'animate-spin' : ''}`} />
           </Button>
 
           {/* Balance indicator - shows debt amount */}
