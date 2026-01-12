@@ -1,12 +1,19 @@
 import { useState, useRef, useCallback, useMemo } from 'react';
-import { Plus, Trash2, ShoppingCart, Package } from 'lucide-react';
+import { Plus, Trash2, ShoppingCart, Package, ChevronDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { mockParts } from '@/data/mockData';
-import { Part } from '@/types';
+import { mockParts, mockSuppliers } from '@/data/mockData';
+import { Part, SupplierPrice } from '@/types';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface OrderLine {
   id: string;
@@ -16,6 +23,8 @@ interface OrderLine {
   suggestions: Part[];
   showSuggestions: boolean;
   highlightedIndex: number;
+  selectedSupplierId: string | null;
+  selectedPrice: number;
 }
 
 const createEmptyLine = (): OrderLine => ({
@@ -26,7 +35,15 @@ const createEmptyLine = (): OrderLine => ({
   suggestions: [],
   showSuggestions: false,
   highlightedIndex: -1,
+  selectedSupplierId: null,
+  selectedPrice: 0,
 });
+
+// Helper to get supplier name
+const getSupplierName = (supplierId: string) => {
+  const supplier = mockSuppliers.find(s => s.id === supplierId);
+  return supplier?.nameAr || supplier?.name || supplierId;
+};
 
 export function QuickOrderGrid() {
   const [lines, setLines] = useState<OrderLine[]>(() => 
@@ -55,6 +72,21 @@ export function QuickOrderGrid() {
         p.partNumber.toLowerCase() === searchValue
       );
 
+      // Auto-select first supplier if part found
+      let selectedSupplierId = newLines[index].selectedSupplierId;
+      let selectedPrice = newLines[index].selectedPrice;
+      
+      if (exactMatch) {
+        const firstSupplier = exactMatch.supplierPrices?.[0];
+        if (firstSupplier) {
+          selectedSupplierId = firstSupplier.supplierId;
+          selectedPrice = firstSupplier.price;
+        } else {
+          selectedSupplierId = null;
+          selectedPrice = exactMatch.price;
+        }
+      }
+
       newLines[index] = {
         ...newLines[index],
         partNumber: value,
@@ -62,6 +94,8 @@ export function QuickOrderGrid() {
         suggestions,
         showSuggestions: suggestions.length > 0 && !exactMatch,
         highlightedIndex: -1,
+        selectedSupplierId,
+        selectedPrice,
       };
 
       return newLines;
@@ -69,6 +103,9 @@ export function QuickOrderGrid() {
   }, []);
 
   const handleSelectPart = useCallback((index: number, part: Part) => {
+    // Auto-select first supplier
+    const firstSupplier = part.supplierPrices?.[0];
+    
     setLines(prev => {
       const newLines = [...prev];
       newLines[index] = {
@@ -77,6 +114,8 @@ export function QuickOrderGrid() {
         part,
         suggestions: [],
         showSuggestions: false,
+        selectedSupplierId: firstSupplier?.supplierId || null,
+        selectedPrice: firstSupplier?.price || part.price,
       };
       return newLines;
     });
@@ -86,6 +125,21 @@ export function QuickOrderGrid() {
       const qtyInput = document.getElementById(`qty-${index}`);
       qtyInput?.focus();
     }, 50);
+  }, []);
+
+  const handleSupplierChange = useCallback((index: number, supplierId: string) => {
+    setLines(prev => {
+      const newLines = [...prev];
+      const part = newLines[index].part;
+      const supplierPrice = part?.supplierPrices?.find(sp => sp.supplierId === supplierId);
+      
+      newLines[index] = {
+        ...newLines[index],
+        selectedSupplierId: supplierId,
+        selectedPrice: supplierPrice?.price || part?.price || 0,
+      };
+      return newLines;
+    });
   }, []);
 
   const handleQuantityChange = useCallback((index: number, value: string) => {
@@ -181,8 +235,26 @@ export function QuickOrderGrid() {
     [lines]
   );
 
+  // Group by supplier for summary
+  const supplierGroups = useMemo(() => {
+    const groups: Record<string, { supplierName: string; lines: typeof validLines; total: number }> = {};
+    
+    validLines.forEach(line => {
+      const supplierId = line.selectedSupplierId || 'default';
+      const supplierName = line.selectedSupplierId ? getSupplierName(line.selectedSupplierId) : 'غير محدد';
+      
+      if (!groups[supplierId]) {
+        groups[supplierId] = { supplierName, lines: [], total: 0 };
+      }
+      groups[supplierId].lines.push(line);
+      groups[supplierId].total += line.selectedPrice * line.quantity;
+    });
+    
+    return groups;
+  }, [validLines]);
+
   const totalAmount = useMemo(() => 
-    validLines.reduce((sum, line) => sum + (line.part!.price * line.quantity), 0),
+    validLines.reduce((sum, line) => sum + (line.selectedPrice * line.quantity), 0),
     [validLines]
   );
 
@@ -197,12 +269,13 @@ export function QuickOrderGrid() {
     }
 
     validLines.forEach(line => {
-      addItem(line.part!, line.quantity);
+      addItem(line.part!, line.quantity, line.selectedSupplierId || undefined, line.selectedPrice);
     });
 
+    const supplierCount = Object.keys(supplierGroups).length;
     toast({
       title: 'تمت الإضافة للسلة',
-      description: `تم إضافة ${validLines.length} قطعة للسلة`,
+      description: `تم إضافة ${validLines.length} قطعة من ${supplierCount} مورد`,
     });
 
     // Clear all lines
@@ -212,10 +285,11 @@ export function QuickOrderGrid() {
   return (
     <div className="space-y-4" dir="rtl">
       {/* Grid Header */}
-      <div className="grid grid-cols-[40px_1fr_200px_100px_120px_100px_50px] gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-t-lg font-medium text-sm">
+      <div className="grid grid-cols-[40px_1fr_180px_150px_80px_100px_80px_40px] gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-t-lg font-medium text-sm">
         <div className="text-center">#</div>
         <div>رقم القطعة</div>
         <div>اسم القطعة</div>
+        <div>المورد</div>
         <div className="text-center">الكمية</div>
         <div className="text-center">السعر</div>
         <div className="text-center">المجموع</div>
@@ -228,7 +302,7 @@ export function QuickOrderGrid() {
           <div
             key={line.id}
             className={cn(
-              "grid grid-cols-[40px_1fr_200px_100px_120px_100px_50px] gap-2 px-3 py-2 items-center",
+              "grid grid-cols-[40px_1fr_180px_150px_80px_100px_80px_40px] gap-2 px-3 py-2 items-center",
               index % 2 === 0 ? "bg-background" : "bg-muted/30",
               line.part && "bg-primary/5"
             )}
@@ -291,10 +365,18 @@ export function QuickOrderGrid() {
                           suggestionIndex === line.highlightedIndex ? "text-primary-foreground/80" : "text-muted-foreground"
                         )}>{part.nameAr}</div>
                       </div>
-                      <div className={cn(
-                        "text-sm font-medium",
-                        suggestionIndex === line.highlightedIndex ? "text-primary-foreground" : ""
-                      )}>{part.price.toFixed(2)} ر.س</div>
+                      <div className="text-left">
+                        <div className={cn(
+                          "text-sm font-medium",
+                          suggestionIndex === line.highlightedIndex ? "text-primary-foreground" : ""
+                        )}>{part.price.toFixed(2)} ر.س</div>
+                        {part.supplierPrices && part.supplierPrices.length > 1 && (
+                          <div className={cn(
+                            "text-xs",
+                            suggestionIndex === line.highlightedIndex ? "text-primary-foreground/70" : "text-muted-foreground"
+                          )}>{part.supplierPrices.length} موردين</div>
+                        )}
+                      </div>
                     </button>
                   ))}
                 </div>
@@ -307,6 +389,32 @@ export function QuickOrderGrid() {
                 <span className="text-foreground">{line.part.nameAr}</span>
               ) : (
                 <span className="text-muted-foreground">-</span>
+              )}
+            </div>
+
+            {/* Supplier dropdown */}
+            <div>
+              {line.part && line.part.supplierPrices && line.part.supplierPrices.length > 0 ? (
+                <Select
+                  value={line.selectedSupplierId || ''}
+                  onValueChange={(value) => handleSupplierChange(index, value)}
+                >
+                  <SelectTrigger className="h-9 text-xs">
+                    <SelectValue placeholder="اختر المورد" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {line.part.supplierPrices.map((sp) => (
+                      <SelectItem key={sp.supplierId} value={sp.supplierId}>
+                        <div className="flex items-center justify-between gap-2 w-full">
+                          <span>{getSupplierName(sp.supplierId)}</span>
+                          <span className="text-primary font-medium">{sp.price.toFixed(2)}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <span className="text-sm text-muted-foreground">-</span>
               )}
             </div>
 
@@ -325,7 +433,7 @@ export function QuickOrderGrid() {
             {/* Price */}
             <div className="text-center text-sm">
               {line.part ? (
-                <span>{line.part.price.toFixed(2)} ر.س</span>
+                <span>{line.selectedPrice.toFixed(2)} ر.س</span>
               ) : (
                 <span className="text-muted-foreground">-</span>
               )}
@@ -334,7 +442,7 @@ export function QuickOrderGrid() {
             {/* Total */}
             <div className="text-center text-sm font-medium">
               {line.part && line.quantity > 0 ? (
-                <span className="text-primary">{(line.part.price * line.quantity).toFixed(2)}</span>
+                <span className="text-primary">{(line.selectedPrice * line.quantity).toFixed(2)}</span>
               ) : (
                 <span className="text-muted-foreground">-</span>
               )}
@@ -368,23 +476,43 @@ export function QuickOrderGrid() {
         إضافة صفوف
       </Button>
 
-      {/* Summary & Add to Cart */}
+      {/* Summary by Supplier & Add to Cart */}
       {validLines.length > 0 && (
-        <div className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg border border-border">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Package className="h-5 w-5" />
-              <span><strong className="text-foreground">{validLines.length}</strong> قطعة</span>
-            </div>
-            <div className="text-lg font-bold text-primary">
-              المجموع: {totalAmount.toFixed(2)} ر.س
-            </div>
+        <div className="space-y-3">
+          {/* Supplier breakdown */}
+          <div className="p-4 bg-secondary/30 rounded-lg border border-border space-y-2">
+            <div className="text-sm font-medium text-muted-foreground mb-2">تفصيل حسب المورد:</div>
+            {Object.entries(supplierGroups).map(([supplierId, group]) => (
+              <div key={supplierId} className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <Package className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium">{group.supplierName}</span>
+                  <span className="text-muted-foreground">({group.lines.length} قطعة)</span>
+                </div>
+                <span className="font-bold text-primary">{group.total.toFixed(2)} ر.س</span>
+              </div>
+            ))}
           </div>
-          
-          <Button size="lg" onClick={handleAddAllToCart} className="gap-2">
-            <ShoppingCart className="h-5 w-5" />
-            إضافة الكل للسلة
-          </Button>
+
+          {/* Total & Add to Cart */}
+          <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg border border-primary/20">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Package className="h-5 w-5" />
+                <span><strong className="text-foreground">{validLines.length}</strong> قطعة</span>
+                <span className="text-muted-foreground">•</span>
+                <span><strong className="text-foreground">{Object.keys(supplierGroups).length}</strong> مورد</span>
+              </div>
+              <div className="text-lg font-bold text-primary">
+                الإجمالي: {totalAmount.toFixed(2)} ر.س
+              </div>
+            </div>
+            
+            <Button size="lg" onClick={handleAddAllToCart} className="gap-2">
+              <ShoppingCart className="h-5 w-5" />
+              إضافة الكل للسلة
+            </Button>
+          </div>
         </div>
       )}
     </div>

@@ -1,3 +1,18 @@
+// Supplier types
+export interface Supplier {
+  id: string;
+  name: string;
+  nameAr: string;
+  logo?: string;
+}
+
+// Supplier pricing for a part
+export interface SupplierPrice {
+  supplierId: string;
+  price: number;
+  stock: number;
+}
+
 // Part types
 export interface Part {
   id: string;
@@ -6,16 +21,19 @@ export interface Part {
   nameAr: string;
   brand: string;
   category: string;
-  price: number;
-  stock: number;
+  price: number; // Default/first supplier price
+  stock: number; // Default/first supplier stock
   unit: string;
   image?: string;
+  supplierPrices?: SupplierPrice[]; // Multiple supplier options
 }
 
-// Cart item
+// Cart item with supplier selection
 export interface CartItem {
   part: Part;
   quantity: number;
+  supplierId?: string; // Selected supplier
+  supplierPrice?: number; // Price from selected supplier
 }
 
 // Order types
@@ -28,6 +46,7 @@ export interface OrderItem {
   quantity: number;
   unitPrice: number;
   total: number;
+  supplierId?: string;
 }
 
 export interface Order {
@@ -41,6 +60,8 @@ export interface Order {
   total: number;
   notes?: string;
   isDraft: boolean;
+  supplierId?: string; // Order is per supplier
+  supplierName?: string;
 }
 
 // Transaction types
