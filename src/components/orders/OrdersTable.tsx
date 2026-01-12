@@ -1,0 +1,100 @@
+import { Link } from 'react-router-dom';
+import { Eye, FileEdit, Send } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Order } from '@/types';
+import { OrderStatusBadge } from './OrderStatusBadge';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+
+interface OrdersTableProps {
+  orders: Order[];
+}
+
+export function OrdersTable({ orders }: OrdersTableProps) {
+  return (
+    <div className="border rounded-lg overflow-hidden">
+      <Table>
+        <TableHeader>
+          <TableRow className="bg-muted/50">
+            <TableHead className="text-right font-bold">رقم الطلب</TableHead>
+            <TableHead className="text-right font-bold">التاريخ</TableHead>
+            <TableHead className="text-right font-bold">عدد القطع</TableHead>
+            <TableHead className="text-right font-bold">الإجمالي</TableHead>
+            <TableHead className="text-right font-bold">الحالة</TableHead>
+            <TableHead className="text-center font-bold">الإجراءات</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {orders.map(order => {
+            const formattedDate = new Date(order.date).toLocaleDateString('ar-SA', {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric',
+            });
+
+            return (
+              <TableRow key={order.id} className="hover:bg-muted/30">
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold">{order.orderNumber}</span>
+                    {order.isDraft && (
+                      <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20 text-xs">
+                        مسودة
+                      </Badge>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell className="text-muted-foreground">{formattedDate}</TableCell>
+                <TableCell>
+                  <span className="font-medium">{order.items.length}</span>
+                  <span className="text-muted-foreground text-sm mr-1">قطع</span>
+                </TableCell>
+                <TableCell>
+                  <span className="font-bold text-primary">
+                    {order.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  </span>
+                  <span className="text-muted-foreground text-sm mr-1">ر.س</span>
+                </TableCell>
+                <TableCell>
+                  <OrderStatusBadge status={order.status} />
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center justify-center gap-2">
+                    {order.isDraft ? (
+                      <>
+                        <Button size="sm" className="h-9 gap-1">
+                          <Send className="h-4 w-4" />
+                          إرسال
+                        </Button>
+                        <Link to={`/orders/${order.id}`}>
+                          <Button variant="outline" size="sm" className="h-9 gap-1">
+                            <FileEdit className="h-4 w-4" />
+                            تعديل
+                          </Button>
+                        </Link>
+                      </>
+                    ) : (
+                      <Link to={`/orders/${order.id}`}>
+                        <Button variant="outline" size="sm" className="h-9 gap-1">
+                          <Eye className="h-4 w-4" />
+                          عرض
+                        </Button>
+                      </Link>
+                    )}
+                  </div>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
