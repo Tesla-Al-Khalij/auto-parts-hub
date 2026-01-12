@@ -3,36 +3,72 @@ import { Layout } from '@/components/layout/Layout';
 import { PartSearchBar } from '@/components/search/PartSearchBar';
 import { PartCard } from '@/components/search/PartCard';
 import { mockParts } from '@/data/mockData';
-import { Package, Search } from 'lucide-react';
+import { Package, Search, Filter } from 'lucide-react';
+import { useDebounce } from '@/hooks/useDebounce';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+// Get unique categories from parts
+const categories = [...new Set(mockParts.map(p => p.category))];
 
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [bulkPartNumbers, setBulkPartNumbers] = useState<string[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [stockFilter, setStockFilter] = useState<string>('all');
+  const [showFilters, setShowFilters] = useState(false);
 
-  // Filter parts based on search query or bulk import
+  // Debounce search query for performance
+  const debouncedSearch = useDebounce(searchQuery, 300);
+
+  // Filter parts based on search query, category, and stock
   const filteredParts = useMemo(() => {
+    let results = mockParts;
+
+    // Apply bulk import filter first
     if (bulkPartNumbers.length > 0) {
-      // Search by multiple part numbers (bulk import)
-      return mockParts.filter(part =>
+      results = results.filter(part =>
         bulkPartNumbers.some(pn =>
           part.partNumber.toLowerCase().includes(pn.toLowerCase()) ||
           pn.toLowerCase().includes(part.partNumber.toLowerCase())
         )
       );
-    }
-
-    if (!searchQuery.trim()) {
+    } else if (debouncedSearch.trim()) {
+      // Apply search filter
+      const query = debouncedSearch.toLowerCase();
+      results = results.filter(part =>
+        part.partNumber.toLowerCase().includes(query) ||
+        part.name.toLowerCase().includes(query) ||
+        part.nameAr.includes(debouncedSearch) ||
+        part.brand.toLowerCase().includes(query)
+      );
+    } else {
       return []; // Show nothing until user searches
     }
 
-    const query = searchQuery.toLowerCase();
-    return mockParts.filter(part =>
-      part.partNumber.toLowerCase().includes(query) ||
-      part.name.toLowerCase().includes(query) ||
-      part.nameAr.includes(searchQuery) ||
-      part.brand.toLowerCase().includes(query)
-    );
-  }, [searchQuery, bulkPartNumbers]);
+    // Apply category filter
+    if (selectedCategory !== 'all') {
+      results = results.filter(part => part.category === selectedCategory);
+    }
+
+    // Apply stock filter
+    if (stockFilter === 'inStock') {
+      results = results.filter(part => part.stock > 0);
+    } else if (stockFilter === 'outOfStock') {
+      results = results.filter(part => part.stock <= 0);
+    } else if (stockFilter === 'lowStock') {
+      results = results.filter(part => part.stock > 0 && part.stock <= 10);
+    }
+
+    return results;
+  }, [debouncedSearch, bulkPartNumbers, selectedCategory, stockFilter]);
 
   const handleBulkImport = (partNumbers: string[]) => {
     setBulkPartNumbers(partNumbers);
@@ -63,6 +99,89 @@ const Index = () => {
           onSearchChange={handleSearchChange}
           onBulkImport={handleBulkImport}
         />
+
+        {/* Filters */}
+        <div className="space-y-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowFilters(!showFilters)}
+            className="gap-2"
+          >
+            <Filter className="h-4 w-4" />
+            فلترة النتائج
+            {(selectedCategory !== 'all' || stockFilter !== 'all') && (
+              <Badge variant="secondary" className="mr-1">
+                {[selectedCategory !== 'all', stockFilter !== 'all'].filter(Boolean).length}
+              </Badge>
+            )}
+          </Button>
+
+          {showFilters && (
+            <div className="flex flex-wrap gap-3 p-4 bg-secondary/30 rounded-lg animate-fade-in">
+              {/* Category filter */}
+              <div className="space-y-1.5 min-w-[160px]">
+                <label className="text-sm font-medium text-muted-foreground">التصنيف</label>
+                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="جميع التصنيفات" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">جميع التصنيفات</SelectItem>
+                    {categories.map(cat => (
+                      <SelectItem key={cat} value={cat}>
+                        {cat === 'engine' && 'المحرك'}
+                        {cat === 'brakes' && 'الفرامل'}
+                        {cat === 'filters' && 'الفلاتر'}
+                        {cat === 'electrical' && 'الكهرباء'}
+                        {cat === 'cooling' && 'التبريد'}
+                        {cat === 'transmission' && 'ناقل الحركة'}
+                        {cat === 'body' && 'البودي'}
+                        {cat === 'sensors' && 'الحساسات'}
+                        {cat === 'oils' && 'الزيوت'}
+                        {cat === 'accessories' && 'الإكسسوارات'}
+                        {!['engine', 'brakes', 'filters', 'electrical', 'cooling', 'transmission', 'body', 'sensors', 'oils', 'accessories'].includes(cat) && cat}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Stock filter */}
+              <div className="space-y-1.5 min-w-[160px]">
+                <label className="text-sm font-medium text-muted-foreground">التوفر</label>
+                <Select value={stockFilter} onValueChange={setStockFilter}>
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="جميع المنتجات" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">جميع المنتجات</SelectItem>
+                    <SelectItem value="inStock">متوفر</SelectItem>
+                    <SelectItem value="lowStock">مخزون منخفض</SelectItem>
+                    <SelectItem value="outOfStock">غير متوفر</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Clear filters */}
+              {(selectedCategory !== 'all' || stockFilter !== 'all') && (
+                <div className="flex items-end">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedCategory('all');
+                      setStockFilter('all');
+                    }}
+                    className="text-muted-foreground"
+                  >
+                    مسح الفلاتر
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Results */}
         <div className="space-y-4">
