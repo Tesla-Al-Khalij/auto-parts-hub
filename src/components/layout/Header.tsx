@@ -9,7 +9,9 @@ import {
   FileText, 
   User,
   LogOut,
-  Wallet
+  Wallet,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,10 +26,18 @@ const navItems = [
   { href: '/profile', label: 'حسابي', icon: User },
 ];
 
+const formatBalance = (amount: number, show: boolean) => {
+  if (!show) return '••••••';
+  return amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+
 export function Header() {
   const location = useLocation();
   const { itemCount, total } = useCart();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showBalance, setShowBalance] = useState(true);
+
+  const balance = 11767.75;
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-card shadow-sm">
@@ -70,9 +80,19 @@ export function Header() {
         <div className="flex items-center gap-2">
           {/* Balance indicator */}
           <div className="hidden sm:flex items-center gap-2 rounded-lg bg-success/10 px-3 py-2">
+            <button
+              onClick={() => setShowBalance(!showBalance)}
+              className="p-1 hover:bg-success/20 rounded transition-colors"
+            >
+              {showBalance ? (
+                <Eye className="h-4 w-4 text-success" />
+              ) : (
+                <EyeOff className="h-4 w-4 text-success" />
+              )}
+            </button>
             <Wallet className="h-4 w-4 text-success" />
-            <span className="text-sm font-semibold text-success">
-              {(11767.75).toLocaleString('ar-SA')} ر.س
+            <span className="text-sm font-semibold text-success min-w-[80px]">
+              {formatBalance(balance, showBalance)} ر.س
             </span>
           </div>
 
@@ -100,11 +120,21 @@ export function Header() {
               <div className="flex flex-col gap-4 mt-8">
                 {/* Balance in mobile */}
                 <div className="flex items-center gap-3 rounded-lg bg-success/10 p-4">
+                  <button
+                    onClick={() => setShowBalance(!showBalance)}
+                    className="p-2 hover:bg-success/20 rounded-full transition-colors"
+                  >
+                    {showBalance ? (
+                      <Eye className="h-5 w-5 text-success" />
+                    ) : (
+                      <EyeOff className="h-5 w-5 text-success" />
+                    )}
+                  </button>
                   <Wallet className="h-6 w-6 text-success" />
                   <div>
                     <p className="text-sm text-muted-foreground">رصيدك الحالي</p>
                     <p className="text-lg font-bold text-success">
-                      {(11767.75).toLocaleString('ar-SA')} ر.س
+                      {formatBalance(balance, showBalance)} ر.س
                     </p>
                   </div>
                 </div>
