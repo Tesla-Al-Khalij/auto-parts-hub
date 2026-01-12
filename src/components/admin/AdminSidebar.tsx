@@ -7,7 +7,9 @@ import {
   BarChart3,
   Settings,
   ChevronRight,
-  ChevronLeft
+  ChevronLeft,
+  Warehouse,
+  Shield
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import {
@@ -30,6 +32,8 @@ const menuItems = [
   { title: 'إدارة الطلبات', url: '/admin/orders', icon: ShoppingCart },
   { title: 'إدارة العملاء', url: '/admin/customers', icon: Users },
   { title: 'إدارة الموردين', url: '/admin/suppliers', icon: Truck },
+  { title: 'مخزون الموردين', url: '/admin/supplier-stocks', icon: Warehouse },
+  { title: 'الأدوار والصلاحيات', url: '/admin/roles', icon: Shield },
   { title: 'التقارير', url: '/admin/reports', icon: BarChart3 },
   { title: 'الإعدادات', url: '/admin/settings', icon: Settings },
 ];
