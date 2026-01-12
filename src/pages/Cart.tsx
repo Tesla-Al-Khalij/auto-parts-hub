@@ -1,22 +1,48 @@
 import { Link } from 'react-router-dom';
-import { ShoppingCart, Trash2, Plus, Minus, ArrowRight, Send, Save } from 'lucide-react';
+import { ShoppingCart, Trash2, Plus, Minus, ArrowRight, Send, Save, Package, Store } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
+import { mockSuppliers } from '@/data/mockData';
+import { useMemo } from 'react';
+
+// Helper to get supplier name
+const getSupplierName = (supplierId?: string) => {
+  if (!supplierId) return 'غير محدد';
+  const supplier = mockSuppliers.find(s => s.id === supplierId);
+  return supplier?.nameAr || supplier?.name || supplierId;
+};
 
 export default function Cart() {
   const { items, updateQuantity, removeItem, clearCart, subtotal, vat, total } = useCart();
   const { toast } = useToast();
 
+  // Group items by supplier
+  const supplierGroups = useMemo(() => {
+    const groups: Record<string, typeof items> = {};
+    
+    items.forEach(item => {
+      const supplierId = item.supplierId || 'default';
+      if (!groups[supplierId]) {
+        groups[supplierId] = [];
+      }
+      groups[supplierId].push(item);
+    });
+    
+    return groups;
+  }, [items]);
+
   const handleSendOrder = () => {
+    const supplierCount = Object.keys(supplierGroups).length;
     toast({
-      title: 'تم إرسال الطلب بنجاح',
-      description: 'سيتم مراجعة طلبك وإرسال تأكيد قريباً',
+      title: 'تم إرسال الطلبات بنجاح',
+      description: `تم إنشاء ${supplierCount} طلب منفصل لكل مورد`,
     });
     clearCart();
   };
@@ -60,86 +86,142 @@ export default function Cart() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-foreground">سلة المشتريات</h1>
-            <p className="text-muted-foreground">{items.length} قطع في السلة</p>
+            <p className="text-muted-foreground">
+              {items.length} قطعة • {Object.keys(supplierGroups).length} مورد
+            </p>
           </div>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
-          {/* Cart items */}
-          <div className="lg:col-span-2 space-y-4">
-            {items.map(({ part, quantity }) => (
-              <Card key={part.id}>
-                <CardContent className="p-4">
-                  <div className="flex flex-col sm:flex-row gap-4">
-                    {/* Part info */}
-                    <div className="flex-1 space-y-2">
-                      <div className="flex items-start justify-between">
-                        <code className="text-primary bg-primary/10 px-2 py-1 rounded text-sm font-bold">
-                          {part.partNumber}
-                        </code>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => removeItem(part.id)}
-                        >
-                          <Trash2 className="h-5 w-5" />
-                        </Button>
-                      </div>
-                      <h3 className="text-lg font-semibold">{part.nameAr}</h3>
-                      <p className="text-muted-foreground">{part.brand}</p>
-                    </div>
+          {/* Cart items grouped by supplier */}
+          <div className="lg:col-span-2 space-y-6">
+            {Object.entries(supplierGroups).map(([supplierId, supplierItems]) => {
+              const supplierSubtotal = supplierItems.reduce((sum, item) => {
+                const price = item.supplierPrice || item.part.price;
+                return sum + price * item.quantity;
+              }, 0);
 
-                    {/* Quantity and price */}
-                    <div className="flex sm:flex-col items-center sm:items-end justify-between gap-4">
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-10 w-10"
-                          onClick={() => updateQuantity(part.id, quantity - 1)}
-                        >
-                          <Minus className="h-4 w-4" />
-                        </Button>
-                        <Input
-                          type="number"
-                          min={1}
-                          value={quantity}
-                          onChange={(e) => updateQuantity(part.id, parseInt(e.target.value) || 1)}
-                          className="w-16 h-10 text-center"
-                          dir="ltr"
-                        />
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-10 w-10"
-                          onClick={() => updateQuantity(part.id, quantity + 1)}
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
+              return (
+                <div key={supplierId} className="space-y-4">
+                  {/* Supplier Header */}
+                  <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                        <Store className="h-5 w-5 text-primary" />
                       </div>
-                      <div className="text-left">
-                        <p className="text-sm text-muted-foreground">
-                          {part.price.toLocaleString('ar-SA')} × {quantity}
-                        </p>
-                        <p className="text-xl font-bold text-foreground">
-                          {(part.price * quantity).toLocaleString('ar-SA')} ر.س
-                        </p>
+                      <div>
+                        <h3 className="font-semibold text-foreground">{getSupplierName(supplierId === 'default' ? undefined : supplierId)}</h3>
+                        <p className="text-sm text-muted-foreground">{supplierItems.length} قطعة</p>
                       </div>
+                    </div>
+                    <div className="text-left">
+                      <p className="text-sm text-muted-foreground">مجموع المورد</p>
+                      <p className="font-bold text-primary">{supplierSubtotal.toFixed(2)} ر.س</p>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
+
+                  {/* Supplier Items */}
+                  {supplierItems.map(({ part, quantity, supplierId: itemSupplierId, supplierPrice }) => {
+                    const price = supplierPrice || part.price;
+                    return (
+                      <Card key={`${part.id}-${itemSupplierId || 'default'}`}>
+                        <CardContent className="p-4">
+                          <div className="flex flex-col sm:flex-row gap-4">
+                            {/* Part info */}
+                            <div className="flex-1 space-y-2">
+                              <div className="flex items-start justify-between">
+                                <code className="text-primary bg-primary/10 px-2 py-1 rounded text-sm font-bold">
+                                  {part.partNumber}
+                                </code>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  onClick={() => removeItem(part.id, itemSupplierId)}
+                                >
+                                  <Trash2 className="h-5 w-5" />
+                                </Button>
+                              </div>
+                              <h3 className="text-lg font-semibold">{part.nameAr}</h3>
+                              <p className="text-muted-foreground">{part.brand}</p>
+                            </div>
+
+                            {/* Quantity and price */}
+                            <div className="flex sm:flex-col items-center sm:items-end justify-between gap-4">
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="h-10 w-10"
+                                  onClick={() => updateQuantity(part.id, quantity - 1, itemSupplierId)}
+                                >
+                                  <Minus className="h-4 w-4" />
+                                </Button>
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  value={quantity}
+                                  onChange={(e) => updateQuantity(part.id, parseInt(e.target.value) || 1, itemSupplierId)}
+                                  className="w-16 h-10 text-center"
+                                  dir="ltr"
+                                />
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="h-10 w-10"
+                                  onClick={() => updateQuantity(part.id, quantity + 1, itemSupplierId)}
+                                >
+                                  <Plus className="h-4 w-4" />
+                                </Button>
+                              </div>
+                              <div className="text-left">
+                                <p className="text-sm text-muted-foreground">
+                                  {price.toLocaleString('ar-SA')} × {quantity}
+                                </p>
+                                <p className="text-xl font-bold text-foreground">
+                                  {(price * quantity).toLocaleString('ar-SA')} ر.س
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              );
+            })}
           </div>
 
           {/* Order summary */}
           <div className="lg:col-span-1">
             <Card className="sticky top-24">
               <CardHeader>
-                <CardTitle>ملخص الطلب</CardTitle>
+                <CardTitle>ملخص الطلبات</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Supplier breakdown */}
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">تفصيل حسب المورد:</p>
+                  {Object.entries(supplierGroups).map(([supplierId, supplierItems]) => {
+                    const supplierTotal = supplierItems.reduce((sum, item) => {
+                      const price = item.supplierPrice || item.part.price;
+                      return sum + price * item.quantity;
+                    }, 0);
+                    return (
+                      <div key={supplierId} className="flex justify-between text-sm">
+                        <span className="flex items-center gap-1">
+                          <Package className="h-3 w-3" />
+                          {getSupplierName(supplierId === 'default' ? undefined : supplierId)}
+                        </span>
+                        <span className="font-medium">{supplierTotal.toFixed(2)} ر.س</span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <Separator />
+
                 {/* Notes */}
                 <div>
                   <label className="text-sm font-medium mb-2 block">ملاحظات (اختياري)</label>
@@ -168,6 +250,13 @@ export default function Cart() {
                   </div>
                 </div>
 
+                {/* Info about separate orders */}
+                <div className="p-3 bg-primary/5 rounded-lg border border-primary/20 text-sm">
+                  <p className="text-muted-foreground">
+                    سيتم إنشاء <strong className="text-foreground">{Object.keys(supplierGroups).length}</strong> طلب منفصل لكل مورد
+                  </p>
+                </div>
+
                 {/* Actions */}
                 <div className="space-y-3 pt-4">
                   <Button
@@ -176,7 +265,7 @@ export default function Cart() {
                     onClick={handleSendOrder}
                   >
                     <Send className="h-5 w-5" />
-                    إرسال الطلب
+                    إرسال الطلبات ({Object.keys(supplierGroups).length})
                   </Button>
                   <Button
                     variant="outline"

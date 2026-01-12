@@ -1,10 +1,33 @@
-import { Part, Order, Transaction, UserProfile } from '@/types';
+import { Part, Order, Transaction, UserProfile, Supplier } from '@/types';
+
+// Mock Suppliers
+export const mockSuppliers: Supplier[] = [
+  { id: 'sup-1', name: 'Al Rajhi Auto Parts', nameAr: 'الراجحي لقطع الغيار' },
+  { id: 'sup-2', name: 'Gulf Parts Trading', nameAr: 'الخليج لتجارة القطع' },
+  { id: 'sup-3', name: 'Saudi Auto Warehouse', nameAr: 'المستودع السعودي للسيارات' },
+  { id: 'sup-4', name: 'Premium Parts Co', nameAr: 'شركة القطع المميزة' },
+];
 
 export const mockParts: Part[] = [
-  { id: '1', partNumber: '96700-B11004X', name: 'Steering Switch LH', nameAr: 'SWITCH ASSY-STRG LH', brand: 'Hyundai', category: 'electrical', price: 172.50, stock: 1, unit: 'قطعة' },
-  { id: '2', partNumber: '99310-AY000SAW', name: 'Rear Bumper Sensor', nameAr: 'حساس صدام خلفي اكسنت 2024 وكالة', brand: 'Hyundai', category: 'sensors', price: 75.08, stock: 4, unit: 'قطعة' },
-  { id: '3', partNumber: '26320-3C30AT', name: 'Oil Filter 6 Cyl', nameAr: 'فلتر زيت 6 تجاري', brand: 'Hyundai', category: 'filters', price: 5.00, stock: 2, unit: 'قطعة' },
-  { id: '4', partNumber: '26350-2M000T', name: 'Oil Filter 1.6', nameAr: 'فلتر زيت 1.6النترا 21/تجاري', brand: 'Hyundai', category: 'filters', price: 5.00, stock: 2, unit: 'قطعة' },
+  { id: '1', partNumber: '96700-B11004X', name: 'Steering Switch LH', nameAr: 'SWITCH ASSY-STRG LH', brand: 'Hyundai', category: 'electrical', price: 172.50, stock: 1, unit: 'قطعة', supplierPrices: [
+    { supplierId: 'sup-1', price: 172.50, stock: 1 },
+    { supplierId: 'sup-2', price: 165.00, stock: 3 },
+    { supplierId: 'sup-3', price: 180.00, stock: 5 },
+  ]},
+  { id: '2', partNumber: '99310-AY000SAW', name: 'Rear Bumper Sensor', nameAr: 'حساس صدام خلفي اكسنت 2024 وكالة', brand: 'Hyundai', category: 'sensors', price: 75.08, stock: 4, unit: 'قطعة', supplierPrices: [
+    { supplierId: 'sup-1', price: 75.08, stock: 4 },
+    { supplierId: 'sup-4', price: 72.00, stock: 10 },
+  ]},
+  { id: '3', partNumber: '26320-3C30AT', name: 'Oil Filter 6 Cyl', nameAr: 'فلتر زيت 6 تجاري', brand: 'Hyundai', category: 'filters', price: 5.00, stock: 2, unit: 'قطعة', supplierPrices: [
+    { supplierId: 'sup-1', price: 5.00, stock: 2 },
+    { supplierId: 'sup-2', price: 4.50, stock: 15 },
+    { supplierId: 'sup-3', price: 5.25, stock: 8 },
+    { supplierId: 'sup-4', price: 4.80, stock: 20 },
+  ]},
+  { id: '4', partNumber: '26350-2M000T', name: 'Oil Filter 1.6', nameAr: 'فلتر زيت 1.6النترا 21/تجاري', brand: 'Hyundai', category: 'filters', price: 5.00, stock: 2, unit: 'قطعة', supplierPrices: [
+    { supplierId: 'sup-2', price: 5.00, stock: 2 },
+    { supplierId: 'sup-3', price: 4.75, stock: 12 },
+  ]},
   { id: '5', partNumber: '66311-1R350T', name: 'Fender Left Accent', nameAr: 'رفرف اكسنت يسار 14/17 بدون', brand: 'Hyundai', category: 'body', price: 59.89, stock: 2, unit: 'قطعة' },
   { id: '6', partNumber: '66311-C1000T', name: 'Fender Left Sonata', nameAr: 'رفرف يسار سوناتا 16/17', brand: 'Hyundai', category: 'body', price: 69.97, stock: 0, unit: 'قطعة' },
   { id: '7', partNumber: '66320-L1000T', name: 'Fender Right Sonata', nameAr: 'رفرف يمين سوناتا 20/21', brand: 'Hyundai', category: 'body', price: 99.00, stock: 1, unit: 'قطعة' },
