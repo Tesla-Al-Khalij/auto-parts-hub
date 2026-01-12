@@ -70,10 +70,10 @@ export function TransactionRow({ transaction }: TransactionRowProps) {
           'text-lg font-bold',
           transaction.amount > 0 ? 'text-success' : 'text-destructive'
         )}>
-          {transaction.amount > 0 ? '+' : ''}{transaction.amount.toLocaleString('ar-SA')} ر.س
+          {transaction.amount > 0 ? '+' : ''}{transaction.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })} ر.س
         </p>
         <p className="text-sm text-muted-foreground">
-          الرصيد: {transaction.balance.toLocaleString('ar-SA')} ر.س
+          الرصيد: {transaction.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })} ر.س
         </p>
       </div>
     </div>
