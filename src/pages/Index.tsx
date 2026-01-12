@@ -2,11 +2,13 @@ import { useState, useMemo, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { PartSearchBar } from '@/components/search/PartSearchBar';
 import { PartCard } from '@/components/search/PartCard';
+import { QuickOrderGrid } from '@/components/search/QuickOrderGrid';
 import { mockParts } from '@/data/mockData';
-import { Package, Search, Filter, ChevronRight, ChevronLeft, ArrowUpDown } from 'lucide-react';
+import { Package, Search, Filter, ChevronRight, ChevronLeft, ArrowUpDown, LayoutGrid, Table2 } from 'lucide-react';
 import { useDebounce } from '@/hooks/useDebounce';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
   Select,
   SelectContent,
@@ -19,7 +21,10 @@ import {
 const categories = [...new Set(mockParts.map(p => p.category))];
 const ITEMS_PER_PAGE = 10;
 
+type ViewMode = 'search' | 'grid';
+
 const Index = () => {
+  const [viewMode, setViewMode] = useState<ViewMode>('search');
   const [searchQuery, setSearchQuery] = useState('');
   const [bulkPartNumbers, setBulkPartNumbers] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -128,16 +133,43 @@ const Index = () => {
             البحث عن قطع الغيار
           </h1>
           <p className="text-muted-foreground text-lg">
-            ابحث برقم القطعة أو استورد قائمة من ملف Excel
+            {viewMode === 'search' 
+              ? 'ابحث برقم القطعة أو استورد قائمة من ملف Excel'
+              : 'طلب سريع - ادخل أرقام القطع والكميات مباشرة'
+            }
           </p>
         </div>
 
-        {/* Search bar */}
-        <PartSearchBar
-          searchQuery={searchQuery}
-          onSearchChange={handleSearchChange}
-          onBulkImport={handleBulkImport}
-        />
+        {/* View Mode Toggle */}
+        <div className="flex justify-center">
+          <ToggleGroup 
+            type="single" 
+            value={viewMode} 
+            onValueChange={(value) => value && setViewMode(value as ViewMode)}
+            className="bg-secondary/50 p-1 rounded-lg"
+          >
+            <ToggleGroupItem value="search" className="gap-2 px-4">
+              <Search className="h-4 w-4" />
+              بحث عادي
+            </ToggleGroupItem>
+            <ToggleGroupItem value="grid" className="gap-2 px-4">
+              <Table2 className="h-4 w-4" />
+              طلب سريع
+            </ToggleGroupItem>
+          </ToggleGroup>
+        </div>
+
+        {/* Quick Order Grid Mode */}
+        {viewMode === 'grid' ? (
+          <QuickOrderGrid />
+        ) : (
+          <>
+            {/* Search bar */}
+            <PartSearchBar
+              searchQuery={searchQuery}
+              onSearchChange={handleSearchChange}
+              onBulkImport={handleBulkImport}
+            />
 
         {/* Filters */}
         <div className="space-y-3">
@@ -365,6 +397,8 @@ const Index = () => {
             </>
           )}
         </div>
+          </>
+        )}
       </div>
     </Layout>
   );
