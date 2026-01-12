@@ -1,57 +1,170 @@
 import { useState } from 'react';
-import { Package, Search, Filter } from 'lucide-react';
+import { Package, Search, X, Calendar, Plus, ArrowLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { OrderCard } from '@/components/orders/OrderCard';
 import { mockOrders } from '@/data/mockData';
+import { format } from 'date-fns';
+import { ar } from 'date-fns/locale';
 
 export default function Orders() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [dateFrom, setDateFrom] = useState<Date | undefined>();
+  const [dateTo, setDateTo] = useState<Date | undefined>();
+
+  const clearFilters = () => {
+    setSearchQuery('');
+    setStatusFilter('all');
+    setDateFrom(undefined);
+    setDateTo(undefined);
+  };
+
+  const hasActiveFilters = searchQuery || statusFilter !== 'all' || dateFrom || dateTo;
 
   const filteredOrders = mockOrders.filter(order => {
-    const matchesSearch = 
+    // Search filter
+    const matchesSearch = !searchQuery || 
       order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
       order.items.some(item => 
         item.partNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.name.includes(searchQuery)
       );
 
-    if (activeTab === 'all') return matchesSearch;
-    if (activeTab === 'drafts') return matchesSearch && order.isDraft;
-    if (activeTab === 'active') return matchesSearch && !order.isDraft && ['pending', 'confirmed', 'shipped'].includes(order.status);
-    if (activeTab === 'completed') return matchesSearch && ['delivered', 'cancelled'].includes(order.status);
-    return matchesSearch;
+    // Tab filter
+    let matchesTab = true;
+    if (activeTab === 'drafts') matchesTab = order.isDraft;
+    else if (activeTab === 'active') matchesTab = !order.isDraft && ['pending', 'confirmed', 'shipped'].includes(order.status);
+    else if (activeTab === 'completed') matchesTab = ['delivered', 'cancelled'].includes(order.status);
+
+    // Status filter
+    const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
+
+    // Date filter
+    const orderDate = new Date(order.date);
+    const matchesDateFrom = !dateFrom || orderDate >= dateFrom;
+    const matchesDateTo = !dateTo || orderDate <= dateTo;
+
+    return matchesSearch && matchesTab && matchesStatus && matchesDateFrom && matchesDateTo;
   });
 
   const draftsCount = mockOrders.filter(o => o.isDraft).length;
   const activeCount = mockOrders.filter(o => !o.isDraft && ['pending', 'confirmed', 'shipped'].includes(o.status)).length;
+  const completedCount = mockOrders.filter(o => ['delivered', 'cancelled'].includes(o.status)).length;
 
   return (
     <Layout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-            <Package className="h-6 w-6 text-primary" />
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+              <Package className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">طلباتي</h1>
+              <p className="text-muted-foreground">عرض وتتبع جميع طلباتك</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">طلباتي</h1>
-            <p className="text-muted-foreground">عرض وتتبع جميع طلباتك</p>
-          </div>
+          <Link to="/">
+            <Button size="lg" className="gap-2 h-12">
+              <Plus className="h-5 w-5" />
+              طلب جديد
+            </Button>
+          </Link>
         </div>
 
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-          <Input
-            placeholder="ابحث برقم الطلب أو رقم القطعة..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-12 pr-12"
-          />
+        {/* Search & Filters */}
+        <div className="space-y-4">
+          {/* Main search */}
+          <div className="relative">
+            <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground" />
+            <Input
+              placeholder="ابحث برقم الطلب أو رقم القطعة..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-14 pr-14 text-lg"
+            />
+            {searchQuery && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute left-2 top-1/2 -translate-y-1/2"
+                onClick={() => setSearchQuery('')}
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            )}
+          </div>
+
+          {/* Filter row */}
+          <div className="flex flex-wrap gap-3">
+            {/* Status filter */}
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[180px] h-12">
+                <SelectValue placeholder="حالة الطلب" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">جميع الحالات</SelectItem>
+                <SelectItem value="pending">قيد الانتظار</SelectItem>
+                <SelectItem value="confirmed">تم التأكيد</SelectItem>
+                <SelectItem value="shipped">تم الشحن</SelectItem>
+                <SelectItem value="delivered">تم التسليم</SelectItem>
+                <SelectItem value="cancelled">ملغي</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Date from */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="h-12 gap-2 min-w-[160px] justify-start">
+                  <Calendar className="h-5 w-5" />
+                  {dateFrom ? format(dateFrom, 'dd/MM/yyyy', { locale: ar }) : 'من تاريخ'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <CalendarComponent
+                  mode="single"
+                  selected={dateFrom}
+                  onSelect={setDateFrom}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+
+            {/* Date to */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="h-12 gap-2 min-w-[160px] justify-start">
+                  <Calendar className="h-5 w-5" />
+                  {dateTo ? format(dateTo, 'dd/MM/yyyy', { locale: ar }) : 'إلى تاريخ'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <CalendarComponent
+                  mode="single"
+                  selected={dateTo}
+                  onSelect={setDateTo}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+
+            {/* Clear filters */}
+            {hasActiveFilters && (
+              <Button variant="ghost" onClick={clearFilters} className="h-12 text-destructive">
+                <X className="h-4 w-4 ml-2" />
+                مسح الفلاتر
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Tabs */}
@@ -67,11 +180,18 @@ export default function Orders() {
               النشطة ({activeCount})
             </TabsTrigger>
             <TabsTrigger value="completed" className="h-12 text-base">
-              المكتملة
+              المكتملة ({completedCount})
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value={activeTab} className="mt-6">
+            {/* Results count */}
+            {filteredOrders.length > 0 && (
+              <p className="text-muted-foreground mb-4">
+                عدد النتائج: <strong>{filteredOrders.length}</strong> طلب
+              </p>
+            )}
+
             {filteredOrders.length > 0 ? (
               <div className="grid gap-4 md:grid-cols-2">
                 {filteredOrders.map(order => (
@@ -84,9 +204,24 @@ export default function Orders() {
                 <h3 className="text-lg font-medium text-foreground mb-2">
                   لا توجد طلبات
                 </h3>
-                <p className="text-muted-foreground">
-                  لم يتم العثور على طلبات مطابقة
+                <p className="text-muted-foreground mb-4">
+                  {hasActiveFilters 
+                    ? 'لم يتم العثور على طلبات مطابقة للفلاتر المحددة'
+                    : 'لم تقم بإنشاء أي طلبات بعد'
+                  }
                 </p>
+                {hasActiveFilters ? (
+                  <Button variant="outline" onClick={clearFilters}>
+                    مسح الفلاتر
+                  </Button>
+                ) : (
+                  <Link to="/">
+                    <Button className="gap-2">
+                      <Plus className="h-4 w-4" />
+                      إنشاء طلب جديد
+                    </Button>
+                  </Link>
+                )}
               </div>
             )}
           </TabsContent>
