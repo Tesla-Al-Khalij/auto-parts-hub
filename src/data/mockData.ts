@@ -241,7 +241,7 @@ export const mockUserProfile: UserProfile = {
   address: 'شارع الملك فهد، حي العليا',
   city: 'الرياض',
   taxNumber: '300123456789003',
-  balance: 11767.75,
+  balance: -38232.25, // سالب = مديونية على العميل
   creditLimit: 50000,
   creditTermDays: 60,
   usedCredit: 38232.25,

@@ -289,16 +289,18 @@ export default function Account() {
 
         {/* Summary cards */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card>
+          <Card className={mockUserProfile.balance < 0 ? 'border-destructive/50' : ''}>
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-success/10">
-                  <Wallet className="h-7 w-7 text-success" />
+                <div className={`flex h-14 w-14 items-center justify-center rounded-full ${mockUserProfile.balance < 0 ? 'bg-destructive/10' : 'bg-success/10'}`}>
+                  <Wallet className={`h-7 w-7 ${mockUserProfile.balance < 0 ? 'text-destructive' : 'text-success'}`} />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">الرصيد الحالي</p>
-                  <p className="text-2xl font-bold text-success">
-                    {mockUserProfile.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })} ر.س
+                  <p className="text-sm text-muted-foreground">
+                    {mockUserProfile.balance < 0 ? 'المستحق عليك' : 'الرصيد الحالي'}
+                  </p>
+                  <p className={`text-2xl font-bold ${mockUserProfile.balance < 0 ? 'text-destructive' : 'text-success'}`}>
+                    {Math.abs(mockUserProfile.balance).toLocaleString('en-US', { minimumFractionDigits: 2 })} ر.س
                   </p>
                 </div>
               </div>

@@ -30,7 +30,8 @@ const navItems = [
 
 const formatBalance = (amount: number, show: boolean) => {
   if (!show) return '••••••';
-  return amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const absAmount = Math.abs(amount);
+  return absAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
 export function Header() {
@@ -41,7 +42,7 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showBalance, setShowBalance] = useState(true);
 
-  const balance = 11767.75;
+  const balance = -38232.25; // سالب = مديونية على العميل
 
   const handleLogout = () => {
     logout();
@@ -88,22 +89,25 @@ export function Header() {
 
         {/* Cart & Balance */}
         <div className="flex items-center gap-2">
-          {/* Balance indicator */}
-          <div className="hidden sm:flex items-center gap-2 rounded-lg bg-success/10 px-3 py-2">
+          {/* Balance indicator - shows debt amount */}
+          <div className={`hidden sm:flex items-center gap-2 rounded-lg px-3 py-2 ${balance < 0 ? 'bg-destructive/10' : 'bg-success/10'}`}>
             <button
               onClick={() => setShowBalance(!showBalance)}
-              className="p-1 hover:bg-success/20 rounded transition-colors"
+              className={`p-1 rounded transition-colors ${balance < 0 ? 'hover:bg-destructive/20' : 'hover:bg-success/20'}`}
             >
               {showBalance ? (
-                <Eye className="h-4 w-4 text-success" />
+                <Eye className={`h-4 w-4 ${balance < 0 ? 'text-destructive' : 'text-success'}`} />
               ) : (
-                <EyeOff className="h-4 w-4 text-success" />
+                <EyeOff className={`h-4 w-4 ${balance < 0 ? 'text-destructive' : 'text-success'}`} />
               )}
             </button>
-            <Wallet className="h-4 w-4 text-success" />
-            <span className="text-sm font-semibold text-success min-w-[80px]">
-              {formatBalance(balance, showBalance)} ر.س
-            </span>
+            <Wallet className={`h-4 w-4 ${balance < 0 ? 'text-destructive' : 'text-success'}`} />
+            <div className="text-sm min-w-[100px]">
+              <span className="text-muted-foreground text-xs block">المستحق عليك</span>
+              <span className={`font-semibold ${balance < 0 ? 'text-destructive' : 'text-success'}`}>
+                {formatBalance(balance, showBalance)} ر.س
+              </span>
+            </div>
           </div>
 
           {/* Cart button */}
@@ -139,22 +143,22 @@ export function Header() {
             </SheetTrigger>
             <SheetContent side="right" className="w-80">
               <div className="flex flex-col gap-4 mt-8">
-                {/* Balance in mobile */}
-                <div className="flex items-center gap-3 rounded-lg bg-success/10 p-4">
+                {/* Balance in mobile - shows debt amount */}
+                <div className={`flex items-center gap-3 rounded-lg p-4 ${balance < 0 ? 'bg-destructive/10' : 'bg-success/10'}`}>
                   <button
                     onClick={() => setShowBalance(!showBalance)}
-                    className="p-2 hover:bg-success/20 rounded-full transition-colors"
+                    className={`p-2 rounded-full transition-colors ${balance < 0 ? 'hover:bg-destructive/20' : 'hover:bg-success/20'}`}
                   >
                     {showBalance ? (
-                      <Eye className="h-5 w-5 text-success" />
+                      <Eye className={`h-5 w-5 ${balance < 0 ? 'text-destructive' : 'text-success'}`} />
                     ) : (
-                      <EyeOff className="h-5 w-5 text-success" />
+                      <EyeOff className={`h-5 w-5 ${balance < 0 ? 'text-destructive' : 'text-success'}`} />
                     )}
                   </button>
-                  <Wallet className="h-6 w-6 text-success" />
+                  <Wallet className={`h-6 w-6 ${balance < 0 ? 'text-destructive' : 'text-success'}`} />
                   <div>
-                    <p className="text-sm text-muted-foreground">رصيدك الحالي</p>
-                    <p className="text-lg font-bold text-success">
+                    <p className="text-sm text-muted-foreground">المستحق عليك</p>
+                    <p className={`text-lg font-bold ${balance < 0 ? 'text-destructive' : 'text-success'}`}>
                       {formatBalance(balance, showBalance)} ر.س
                     </p>
                   </div>
