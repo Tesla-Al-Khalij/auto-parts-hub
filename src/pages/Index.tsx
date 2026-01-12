@@ -3,7 +3,7 @@ import { Layout } from '@/components/layout/Layout';
 import { PartSearchBar } from '@/components/search/PartSearchBar';
 import { PartCard } from '@/components/search/PartCard';
 import { mockParts } from '@/data/mockData';
-import { Package, Search, Filter, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Package, Search, Filter, ChevronRight, ChevronLeft, ArrowUpDown } from 'lucide-react';
 import { useDebounce } from '@/hooks/useDebounce';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +26,7 @@ const Index = () => {
   const [stockFilter, setStockFilter] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [sortBy, setSortBy] = useState<string>('default');
 
   // Debounce search query for performance
   const debouncedSearch = useDebounce(searchQuery, 300);
@@ -72,17 +73,41 @@ const Index = () => {
     return results;
   }, [debouncedSearch, bulkPartNumbers, selectedCategory, stockFilter]);
 
+  // Sort parts
+  const sortedParts = useMemo(() => {
+    if (sortBy === 'default') return filteredParts;
+    
+    return [...filteredParts].sort((a, b) => {
+      switch (sortBy) {
+        case 'priceAsc':
+          return a.price - b.price;
+        case 'priceDesc':
+          return b.price - a.price;
+        case 'stockAsc':
+          return a.stock - b.stock;
+        case 'stockDesc':
+          return b.stock - a.stock;
+        case 'nameAsc':
+          return a.nameAr.localeCompare(b.nameAr, 'ar');
+        case 'nameDesc':
+          return b.nameAr.localeCompare(a.nameAr, 'ar');
+        default:
+          return 0;
+      }
+    });
+  }, [filteredParts, sortBy]);
+
   // Pagination
-  const totalPages = Math.ceil(filteredParts.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(sortedParts.length / ITEMS_PER_PAGE);
   const paginatedParts = useMemo(() => {
     const start = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredParts.slice(start, start + ITEMS_PER_PAGE);
-  }, [filteredParts, currentPage]);
+    return sortedParts.slice(start, start + ITEMS_PER_PAGE);
+  }, [sortedParts, currentPage]);
 
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch, bulkPartNumbers, selectedCategory, stockFilter]);
+  }, [debouncedSearch, bulkPartNumbers, selectedCategory, stockFilter, sortBy]);
 
   const handleBulkImport = (partNumbers: string[]) => {
     setBulkPartNumbers(partNumbers);
@@ -124,9 +149,9 @@ const Index = () => {
           >
             <Filter className="h-4 w-4" />
             فلترة النتائج
-            {(selectedCategory !== 'all' || stockFilter !== 'all') && (
+            {(selectedCategory !== 'all' || stockFilter !== 'all' || sortBy !== 'default') && (
               <Badge variant="secondary" className="mr-1">
-                {[selectedCategory !== 'all', stockFilter !== 'all'].filter(Boolean).length}
+                {[selectedCategory !== 'all', stockFilter !== 'all', sortBy !== 'default'].filter(Boolean).length}
               </Badge>
             )}
           </Button>
@@ -177,8 +202,28 @@ const Index = () => {
                 </Select>
               </div>
 
+              {/* Sort by */}
+              <div className="space-y-1.5 min-w-[180px]">
+                <label className="text-sm font-medium text-muted-foreground">الترتيب</label>
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="h-10">
+                    <ArrowUpDown className="h-4 w-4 ml-2" />
+                    <SelectValue placeholder="الترتيب الافتراضي" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">الترتيب الافتراضي</SelectItem>
+                    <SelectItem value="priceAsc">السعر: من الأقل للأعلى</SelectItem>
+                    <SelectItem value="priceDesc">السعر: من الأعلى للأقل</SelectItem>
+                    <SelectItem value="stockDesc">المخزون: من الأعلى للأقل</SelectItem>
+                    <SelectItem value="stockAsc">المخزون: من الأقل للأعلى</SelectItem>
+                    <SelectItem value="nameAsc">الاسم: أ - ي</SelectItem>
+                    <SelectItem value="nameDesc">الاسم: ي - أ</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Clear filters */}
-              {(selectedCategory !== 'all' || stockFilter !== 'all') && (
+              {(selectedCategory !== 'all' || stockFilter !== 'all' || sortBy !== 'default') && (
                 <div className="flex items-end">
                   <Button
                     variant="ghost"
@@ -186,6 +231,7 @@ const Index = () => {
                     onClick={() => {
                       setSelectedCategory('all');
                       setStockFilter('all');
+                      setSortBy('default');
                     }}
                     className="text-muted-foreground"
                   >
