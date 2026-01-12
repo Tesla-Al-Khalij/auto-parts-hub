@@ -1,11 +1,11 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
-import { Plus, Trash2, ShoppingCart, Package, Keyboard, Copy } from 'lucide-react';
+import { Plus, Trash2, Package, Keyboard, Copy, Save } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { mockSuppliers } from '@/data/mockData';
 import { useCachedParts } from '@/hooks/useCachedParts';
 import { Part, SupplierPrice } from '@/types';
-import { useCart } from '@/contexts/CartContext';
+// Cart context removed - orders saved directly
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -53,7 +53,7 @@ export function QuickOrderGrid() {
     Array.from({ length: 10 }, () => createEmptyLine())
   );
   const [focusedIndex, setFocusedIndex] = useState<number>(0);
-  const { addItem } = useCart();
+  // Cart context removed - orders saved directly
   const { toast } = useToast();
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -120,8 +120,8 @@ export function QuickOrderGrid() {
     });
   }, [toast]);
 
-  // Ref to hold handleAddAllToCart for useEffect
-  const handleAddAllToCartRef = useRef<() => void>(() => {});
+  // Ref to hold handleSaveOrder for useEffect
+  const handleSaveOrderRef = useRef<() => void>(() => {});
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -147,10 +147,10 @@ export function QuickOrderGrid() {
         return;
       }
       
-      // Ctrl+Enter - Add all to cart
+      // Ctrl+Enter - Save order directly
       if (e.ctrlKey && e.key === 'Enter') {
         e.preventDefault();
-        handleAddAllToCartRef.current();
+        handleSaveOrderRef.current();
         return;
       }
       
@@ -371,34 +371,57 @@ export function QuickOrderGrid() {
     [validLines]
   );
 
-  const handleAddAllToCart = useCallback(() => {
+  // Save order directly (grouped by supplier)
+  const handleSaveOrder = useCallback(() => {
     if (validLines.length === 0) {
       toast({
         title: 'لا توجد قطع',
-        description: 'الرجاء إضافة قطع للسلة أولاً',
+        description: 'الرجاء إضافة قطع أولاً',
         variant: 'destructive',
       });
       return;
     }
 
-    validLines.forEach(line => {
-      addItem(line.part!, line.quantity, line.selectedSupplierId || undefined, line.selectedPrice);
+    // Create separate orders for each supplier
+    const ordersCreated: string[] = [];
+    
+    Object.entries(supplierGroups).forEach(([supplierId, group]) => {
+      const orderNumber = `ORD-${Date.now()}-${supplierId.slice(-3).toUpperCase()}`;
+      
+      // In a real app, this would save to database
+      // For now, we'll show a toast with order details
+      ordersCreated.push(`${group.supplierName}: ${orderNumber}`);
+      
+      console.log('Order created:', {
+        orderNumber,
+        supplierId,
+        supplierName: group.supplierName,
+        items: group.lines.map(line => ({
+          partId: line.part!.id,
+          partNumber: line.part!.partNumber,
+          name: line.part!.nameAr,
+          quantity: line.quantity,
+          unitPrice: line.selectedPrice,
+          total: line.selectedPrice * line.quantity,
+        })),
+        total: group.total,
+      });
     });
 
     const supplierCount = Object.keys(supplierGroups).length;
     toast({
-      title: 'تمت الإضافة للسلة',
-      description: `تم إضافة ${validLines.length} قطعة من ${supplierCount} مورد`,
+      title: 'تم حفظ الطلب بنجاح',
+      description: `تم إنشاء ${supplierCount} طلب${supplierCount > 1 ? 'ات' : ''} منفصلة للموردين`,
     });
 
     // Clear all lines
     setLines(Array.from({ length: 10 }, () => createEmptyLine()));
-  }, [validLines, supplierGroups, addItem, toast]);
+  }, [validLines, supplierGroups, toast]);
 
-  // Update ref when handleAddAllToCart changes
+  // Update ref when handleSaveOrder changes
   useEffect(() => {
-    handleAddAllToCartRef.current = handleAddAllToCart;
-  }, [handleAddAllToCart]);
+    handleSaveOrderRef.current = handleSaveOrder;
+  }, [handleSaveOrder]);
 
   return (
     <div className="space-y-4" dir="rtl" ref={containerRef}>
@@ -423,7 +446,7 @@ export function QuickOrderGrid() {
           </Badge>
           <Badge variant="outline" className="gap-1">
             <span className="font-mono">Ctrl+Enter</span>
-            <span className="text-muted-foreground">إضافة للسلة</span>
+            <span className="text-muted-foreground">حفظ الطلب</span>
           </Badge>
         </div>
       </div>
@@ -652,7 +675,7 @@ export function QuickOrderGrid() {
             ))}
           </div>
 
-          {/* Total & Add to Cart */}
+          {/* Total & Save Order */}
           <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg border border-primary/20">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 text-muted-foreground">
@@ -666,9 +689,9 @@ export function QuickOrderGrid() {
               </div>
             </div>
             
-            <Button size="lg" onClick={handleAddAllToCart} className="gap-2">
-              <ShoppingCart className="h-5 w-5" />
-              إضافة الكل للسلة
+            <Button size="lg" onClick={handleSaveOrder} className="gap-2">
+              <Save className="h-5 w-5" />
+              حفظ الطلب
             </Button>
           </div>
         </div>
