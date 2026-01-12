@@ -15,6 +15,7 @@ interface OrderLine {
   quantity: number;
   suggestions: Part[];
   showSuggestions: boolean;
+  highlightedIndex: number;
 }
 
 const createEmptyLine = (): OrderLine => ({
@@ -24,6 +25,7 @@ const createEmptyLine = (): OrderLine => ({
   quantity: 1,
   suggestions: [],
   showSuggestions: false,
+  highlightedIndex: -1,
 });
 
 export function QuickOrderGrid() {
@@ -59,6 +61,7 @@ export function QuickOrderGrid() {
         part: exactMatch || null,
         suggestions,
         showSuggestions: suggestions.length > 0 && !exactMatch,
+        highlightedIndex: -1,
       };
 
       return newLines;
@@ -95,31 +98,67 @@ export function QuickOrderGrid() {
   }, []);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent, index: number, field: 'partNumber' | 'quantity') => {
+    const line = lines[index];
+    
+    // Handle suggestions navigation
+    if (field === 'partNumber' && line.showSuggestions && line.suggestions.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setLines(prev => {
+          const newLines = [...prev];
+          const currentIdx = newLines[index].highlightedIndex;
+          const nextIdx = currentIdx < newLines[index].suggestions.length - 1 ? currentIdx + 1 : 0;
+          newLines[index] = { ...newLines[index], highlightedIndex: nextIdx };
+          return newLines;
+        });
+        return;
+      }
+      
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setLines(prev => {
+          const newLines = [...prev];
+          const currentIdx = newLines[index].highlightedIndex;
+          const nextIdx = currentIdx > 0 ? currentIdx - 1 : newLines[index].suggestions.length - 1;
+          newLines[index] = { ...newLines[index], highlightedIndex: nextIdx };
+          return newLines;
+        });
+        return;
+      }
+      
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const selectedIndex = line.highlightedIndex >= 0 ? line.highlightedIndex : 0;
+        const selectedPart = line.suggestions[selectedIndex];
+        if (selectedPart) {
+          handleSelectPart(index, selectedPart);
+        }
+        return;
+      }
+      
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setLines(prev => {
+          const newLines = [...prev];
+          newLines[index] = { ...newLines[index], showSuggestions: false, highlightedIndex: -1 };
+          return newLines;
+        });
+        return;
+      }
+    }
+    
+    // Move to next row on Enter/Tab from quantity
     if (e.key === 'Enter' || e.key === 'Tab') {
       if (field === 'quantity') {
         e.preventDefault();
-        // Move to next line's part number
         const nextIndex = index + 1;
         if (nextIndex < lines.length) {
           inputRefs.current[nextIndex]?.focus();
         } else {
-          // Add more lines if at the end
           setLines(prev => [...prev, ...Array.from({ length: 5 }, () => createEmptyLine())]);
           setTimeout(() => {
             inputRefs.current[nextIndex]?.focus();
           }, 50);
-        }
-      }
-    }
-    
-    // Arrow keys for suggestions
-    if (field === 'partNumber' && lines[index].showSuggestions) {
-      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-        e.preventDefault();
-        // Simple: just select first suggestion on any arrow
-        const firstSuggestion = lines[index].suggestions[0];
-        if (firstSuggestion) {
-          handleSelectPart(index, firstSuggestion);
         }
       }
     }
@@ -223,18 +262,39 @@ export function QuickOrderGrid() {
               {/* Suggestions dropdown */}
               {line.showSuggestions && (
                 <div className="absolute top-full right-0 left-0 z-50 mt-1 bg-popover border border-border rounded-md shadow-lg max-h-48 overflow-auto">
-                  {line.suggestions.map(part => (
+                  {line.suggestions.map((part, suggestionIndex) => (
                     <button
                       key={part.id}
                       type="button"
-                      className="w-full px-3 py-2 text-right hover:bg-accent flex items-center justify-between gap-2"
+                      className={cn(
+                        "w-full px-3 py-2 text-right flex items-center justify-between gap-2 transition-colors",
+                        suggestionIndex === line.highlightedIndex 
+                          ? "bg-primary text-primary-foreground" 
+                          : "hover:bg-accent"
+                      )}
                       onMouseDown={() => handleSelectPart(index, part)}
+                      onMouseEnter={() => {
+                        setLines(prev => {
+                          const newLines = [...prev];
+                          newLines[index] = { ...newLines[index], highlightedIndex: suggestionIndex };
+                          return newLines;
+                        });
+                      }}
                     >
                       <div className="flex-1 min-w-0">
-                        <div className="font-mono text-sm text-primary">{part.partNumber}</div>
-                        <div className="text-xs text-muted-foreground truncate">{part.nameAr}</div>
+                        <div className={cn(
+                          "font-mono text-sm",
+                          suggestionIndex === line.highlightedIndex ? "text-primary-foreground" : "text-primary"
+                        )}>{part.partNumber}</div>
+                        <div className={cn(
+                          "text-xs truncate",
+                          suggestionIndex === line.highlightedIndex ? "text-primary-foreground/80" : "text-muted-foreground"
+                        )}>{part.nameAr}</div>
                       </div>
-                      <div className="text-sm font-medium">{part.price.toFixed(2)} ر.س</div>
+                      <div className={cn(
+                        "text-sm font-medium",
+                        suggestionIndex === line.highlightedIndex ? "text-primary-foreground" : ""
+                      )}>{part.price.toFixed(2)} ر.س</div>
                     </button>
                   ))}
                 </div>
