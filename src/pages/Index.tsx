@@ -23,7 +23,7 @@ type ViewMode = 'search' | 'grid';
 
 const Index = () => {
   const { parts, isLoading, isFromCache, lastUpdated, refresh } = useCachedParts();
-  const [viewMode, setViewMode] = useState<ViewMode>('search');
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [bulkPartNumbers, setBulkPartNumbers] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
