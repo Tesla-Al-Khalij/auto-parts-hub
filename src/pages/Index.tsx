@@ -3,8 +3,8 @@ import { Layout } from '@/components/layout/Layout';
 import { PartSearchBar } from '@/components/search/PartSearchBar';
 import { PartCard } from '@/components/search/PartCard';
 import { QuickOrderGrid } from '@/components/search/QuickOrderGrid';
-import { mockParts } from '@/data/mockData';
-import { Package, Search, Filter, ChevronRight, ChevronLeft, ArrowUpDown, LayoutGrid, Table2 } from 'lucide-react';
+import { useCachedParts } from '@/hooks/useCachedParts';
+import { Package, Search, Filter, ChevronRight, ChevronLeft, ArrowUpDown, LayoutGrid, Table2, Database, CloudOff, RefreshCw } from 'lucide-react';
 import { useDebounce } from '@/hooks/useDebounce';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -17,13 +17,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-// Get unique categories from parts
-const categories = [...new Set(mockParts.map(p => p.category))];
 const ITEMS_PER_PAGE = 10;
 
 type ViewMode = 'search' | 'grid';
 
 const Index = () => {
+  const { parts, isLoading, isFromCache, lastUpdated, refresh } = useCachedParts();
   const [viewMode, setViewMode] = useState<ViewMode>('search');
   const [searchQuery, setSearchQuery] = useState('');
   const [bulkPartNumbers, setBulkPartNumbers] = useState<string[]>([]);
@@ -33,12 +32,15 @@ const Index = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState<string>('default');
 
+  // Get unique categories from cached parts
+  const categories = useMemo(() => [...new Set(parts.map(p => p.category))], [parts]);
+
   // Debounce search query for performance
   const debouncedSearch = useDebounce(searchQuery, 300);
 
   // Filter parts based on search query, category, and stock
   const filteredParts = useMemo(() => {
-    let results = mockParts;
+    let results = parts;
 
     // Apply bulk import filter first
     if (bulkPartNumbers.length > 0) {
@@ -139,6 +141,31 @@ const Index = () => {
             }
           </p>
         </div>
+
+        {/* Cache Status Indicator */}
+        {isFromCache && (
+          <div className="flex items-center justify-center gap-2 text-sm">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 rounded-full">
+              <CloudOff className="h-4 w-4" />
+              <span>البيانات من الذاكرة المؤقتة</span>
+              {lastUpdated && (
+                <span className="text-amber-600 dark:text-amber-400">
+                  ({lastUpdated.toLocaleDateString('ar-SA')})
+                </span>
+              )}
+              {navigator.onLine && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-amber-800 dark:text-amber-200 hover:bg-amber-200 dark:hover:bg-amber-800"
+                  onClick={refresh}
+                >
+                  <RefreshCw className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* View Mode Toggle */}
         <div className="flex justify-center">

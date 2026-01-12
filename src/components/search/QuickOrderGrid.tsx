@@ -2,7 +2,8 @@ import { useState, useRef, useCallback, useMemo } from 'react';
 import { Plus, Trash2, ShoppingCart, Package, ChevronDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { mockParts, mockSuppliers } from '@/data/mockData';
+import { mockSuppliers } from '@/data/mockData';
+import { useCachedParts } from '@/hooks/useCachedParts';
 import { Part, SupplierPrice } from '@/types';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
@@ -46,6 +47,7 @@ const getSupplierName = (supplierId: string) => {
 };
 
 export function QuickOrderGrid() {
+  const { parts } = useCachedParts();
   const [lines, setLines] = useState<OrderLine[]>(() => 
     Array.from({ length: 10 }, () => createEmptyLine())
   );
@@ -60,7 +62,7 @@ export function QuickOrderGrid() {
       
       // Search for matching parts
       const suggestions = value.length >= 2 
-        ? mockParts.filter(p => 
+        ? parts.filter(p => 
             p.partNumber.toLowerCase().includes(searchValue) ||
             p.name.toLowerCase().includes(searchValue) ||
             p.nameAr.includes(value)
@@ -68,7 +70,7 @@ export function QuickOrderGrid() {
         : [];
 
       // Check for exact match
-      const exactMatch = mockParts.find(p => 
+      const exactMatch = parts.find(p => 
         p.partNumber.toLowerCase() === searchValue
       );
 
@@ -100,7 +102,7 @@ export function QuickOrderGrid() {
 
       return newLines;
     });
-  }, []);
+  }, [parts]);
 
   const handleSelectPart = useCallback((index: number, part: Part) => {
     // Auto-select first supplier
