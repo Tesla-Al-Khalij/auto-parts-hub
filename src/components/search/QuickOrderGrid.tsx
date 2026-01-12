@@ -1,5 +1,5 @@
-import { useState, useRef, useCallback, useMemo } from 'react';
-import { Plus, Trash2, ShoppingCart, Package, ChevronDown } from 'lucide-react';
+import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
+import { Plus, Trash2, ShoppingCart, Package, Keyboard, Copy } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { mockSuppliers } from '@/data/mockData';
@@ -8,6 +8,7 @@ import { Part, SupplierPrice } from '@/types';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -51,9 +52,119 @@ export function QuickOrderGrid() {
   const [lines, setLines] = useState<OrderLine[]>(() => 
     Array.from({ length: 10 }, () => createEmptyLine())
   );
+  const [focusedIndex, setFocusedIndex] = useState<number>(0);
   const { addItem } = useCart();
   const { toast } = useToast();
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Add new row at specific position
+  const handleAddRowAt = useCallback((index: number) => {
+    setLines(prev => {
+      const newLines = [...prev];
+      newLines.splice(index + 1, 0, createEmptyLine());
+      return newLines;
+    });
+    setTimeout(() => {
+      inputRefs.current[index + 1]?.focus();
+    }, 50);
+    toast({
+      title: 'تم إضافة صف جديد',
+      description: `تم إضافة صف في الموضع ${index + 2}`,
+    });
+  }, [toast]);
+
+  // Remove row at specific position
+  const handleRemoveRowAt = useCallback((index: number) => {
+    setLines(prev => {
+      if (prev.length <= 1) {
+        // Keep at least one row
+        return [createEmptyLine()];
+      }
+      const newLines = [...prev];
+      newLines.splice(index, 1);
+      return newLines;
+    });
+    // Focus previous or current row
+    setTimeout(() => {
+      const newIndex = Math.max(0, index - 1);
+      inputRefs.current[newIndex]?.focus();
+    }, 50);
+    toast({
+      title: 'تم حذف الصف',
+    });
+  }, [toast]);
+
+  // Duplicate current row
+  const handleDuplicateRow = useCallback((index: number) => {
+    setLines(prev => {
+      const newLines = [...prev];
+      const duplicatedLine = { ...newLines[index], id: crypto.randomUUID() };
+      newLines.splice(index + 1, 0, duplicatedLine);
+      return newLines;
+    });
+    setTimeout(() => {
+      inputRefs.current[index + 1]?.focus();
+    }, 50);
+    toast({
+      title: 'تم نسخ الصف',
+    });
+  }, [toast]);
+
+  // Clear all rows
+  const handleClearAll = useCallback(() => {
+    setLines(Array.from({ length: 10 }, () => createEmptyLine()));
+    inputRefs.current[0]?.focus();
+    toast({
+      title: 'تم مسح الكل',
+    });
+  }, [toast]);
+
+  // Ref to hold handleAddAllToCart for useEffect
+  const handleAddAllToCartRef = useRef<() => void>(() => {});
+
+  // Global keyboard shortcuts
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // F11 - Add new row after focused
+      if (e.key === 'F11') {
+        e.preventDefault();
+        handleAddRowAt(focusedIndex);
+        return;
+      }
+      
+      // F12 - Remove current row
+      if (e.key === 'F12') {
+        e.preventDefault();
+        handleRemoveRowAt(focusedIndex);
+        return;
+      }
+      
+      // Ctrl+D - Duplicate current row
+      if (e.ctrlKey && e.key === 'd') {
+        e.preventDefault();
+        handleDuplicateRow(focusedIndex);
+        return;
+      }
+      
+      // Ctrl+Enter - Add all to cart
+      if (e.ctrlKey && e.key === 'Enter') {
+        e.preventDefault();
+        handleAddAllToCartRef.current();
+        return;
+      }
+      
+      // Ctrl+Shift+Delete - Clear all
+      if (e.ctrlKey && e.shiftKey && e.key === 'Delete') {
+        e.preventDefault();
+        handleClearAll();
+        return;
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [focusedIndex, handleAddRowAt, handleRemoveRowAt, handleDuplicateRow, handleClearAll]);
 
   const handlePartNumberChange = useCallback((index: number, value: string) => {
     setLines(prev => {
@@ -260,7 +371,7 @@ export function QuickOrderGrid() {
     [validLines]
   );
 
-  const handleAddAllToCart = () => {
+  const handleAddAllToCart = useCallback(() => {
     if (validLines.length === 0) {
       toast({
         title: 'لا توجد قطع',
@@ -282,12 +393,42 @@ export function QuickOrderGrid() {
 
     // Clear all lines
     setLines(Array.from({ length: 10 }, () => createEmptyLine()));
-  };
+  }, [validLines, supplierGroups, addItem, toast]);
+
+  // Update ref when handleAddAllToCart changes
+  useEffect(() => {
+    handleAddAllToCartRef.current = handleAddAllToCart;
+  }, [handleAddAllToCart]);
 
   return (
-    <div className="space-y-4" dir="rtl">
+    <div className="space-y-4" dir="rtl" ref={containerRef}>
+      {/* Keyboard shortcuts hint */}
+      <div className="flex items-center justify-between bg-muted/50 rounded-lg px-4 py-2 border border-border">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Keyboard className="h-4 w-4" />
+          <span>اختصارات:</span>
+        </div>
+        <div className="flex items-center gap-3 text-xs">
+          <Badge variant="outline" className="gap-1">
+            <span className="font-mono">F11</span>
+            <span className="text-muted-foreground">صف جديد</span>
+          </Badge>
+          <Badge variant="outline" className="gap-1">
+            <span className="font-mono">F12</span>
+            <span className="text-muted-foreground">حذف صف</span>
+          </Badge>
+          <Badge variant="outline" className="gap-1">
+            <span className="font-mono">Ctrl+D</span>
+            <span className="text-muted-foreground">نسخ صف</span>
+          </Badge>
+          <Badge variant="outline" className="gap-1">
+            <span className="font-mono">Ctrl+Enter</span>
+            <span className="text-muted-foreground">إضافة للسلة</span>
+          </Badge>
+        </div>
+      </div>
       {/* Grid Header */}
-      <div className="grid grid-cols-[40px_1fr_180px_150px_80px_100px_80px_40px] gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-t-lg font-medium text-sm">
+      <div className="grid grid-cols-[40px_1fr_180px_150px_80px_100px_80px_60px] gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-t-lg font-medium text-sm">
         <div className="text-center">#</div>
         <div>رقم القطعة</div>
         <div>اسم القطعة</div>
@@ -295,7 +436,7 @@ export function QuickOrderGrid() {
         <div className="text-center">الكمية</div>
         <div className="text-center">السعر</div>
         <div className="text-center">المجموع</div>
-        <div></div>
+        <div className="text-center">إجراءات</div>
       </div>
 
       {/* Grid Rows */}
@@ -304,9 +445,10 @@ export function QuickOrderGrid() {
           <div
             key={line.id}
             className={cn(
-              "grid grid-cols-[40px_1fr_180px_150px_80px_100px_80px_40px] gap-2 px-3 py-2 items-center",
+              "grid grid-cols-[40px_1fr_180px_150px_80px_100px_80px_60px] gap-2 px-3 py-2 items-center transition-colors",
               index % 2 === 0 ? "bg-background" : "bg-muted/30",
-              line.part && "bg-primary/5"
+              line.part && "bg-primary/5",
+              focusedIndex === index && "ring-1 ring-primary/50 bg-primary/5"
             )}
           >
             {/* Row number */}
@@ -321,6 +463,7 @@ export function QuickOrderGrid() {
                 value={line.partNumber}
                 onChange={e => handlePartNumberChange(index, e.target.value)}
                 onKeyDown={e => handleKeyDown(e, index, 'partNumber')}
+                onFocus={() => setFocusedIndex(index)}
                 onBlur={() => {
                   setTimeout(() => {
                     setLines(prev => {
@@ -428,6 +571,7 @@ export function QuickOrderGrid() {
               value={line.quantity === 0 ? '' : line.quantity}
               onChange={e => handleQuantityChange(index, e.target.value)}
               onKeyDown={e => handleKeyDown(e, index, 'quantity')}
+              onFocus={() => setFocusedIndex(index)}
               placeholder="0"
               className="h-9 text-sm text-center"
             />
@@ -450,17 +594,29 @@ export function QuickOrderGrid() {
               )}
             </div>
 
-            {/* Clear button */}
-            <div className="text-center">
+            {/* Actions */}
+            <div className="flex items-center gap-0.5">
               {(line.partNumber || line.part) && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                  onClick={() => handleClearLine(index)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-primary"
+                    onClick={() => handleDuplicateRow(index)}
+                    title="نسخ الصف (Ctrl+D)"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                    onClick={() => handleClearLine(index)}
+                    title="مسح الصف"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </>
               )}
             </div>
           </div>
