@@ -101,7 +101,7 @@ export function AdminSidebar() {
           )}
           <SidebarGroupContent>
             <SidebarMenu className="space-y-1.5">
-              {menuItems.map((item, index) => (
+              {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild tooltip={isCollapsed ? item.title : undefined}>
                     <NavLink 
@@ -113,19 +113,9 @@ export function AdminSidebar() {
                         "hover:bg-sidebar-accent/60",
                         isCollapsed && "justify-center px-3"
                       )}
-                      activeClassName={cn(
-                        "bg-gradient-to-l from-primary to-primary/90 text-primary-foreground",
-                        "hover:from-primary hover:to-primary/90 hover:text-primary-foreground",
-                        "font-medium shadow-lg shadow-primary/30",
-                        "before:absolute before:right-0 before:top-1/2 before:-translate-y-1/2",
-                        "before:h-8 before:w-1 before:rounded-l-full before:bg-primary-foreground/80"
-                      )}
+                      activeClassName="!bg-primary !text-primary-foreground hover:!bg-primary hover:!text-primary-foreground font-medium shadow-lg shadow-primary/30"
                     >
-                      <div className={cn(
-                        "flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-300",
-                        "bg-sidebar-accent/40 group-hover:bg-sidebar-accent/60",
-                        "group-[.active]:bg-white/15"
-                      )}>
+                      <div className="flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-300 bg-sidebar-accent/40 group-hover:bg-sidebar-accent/60">
                         <item.icon className="h-[18px] w-[18px] shrink-0" />
                       </div>
                       {!isCollapsed && (
