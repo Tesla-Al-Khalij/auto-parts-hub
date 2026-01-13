@@ -659,6 +659,24 @@ export function QuickOrderGrid() {
     setCustomerNotes('');
   }, [validLines, supplierGroups, customerNotes, toast]);
 
+  // Check for invalid quantities
+  const invalidLines = useMemo(() => {
+    return validLines.filter(line => {
+      if (!line.part) return false;
+      const validation = validateQuantity(line.quantity, line.part.stock);
+      return !validation.isValid;
+    });
+  }, [validLines]);
+
+  // Check for lines requiring contact (large orders)
+  const largeOrderLines = useMemo(() => {
+    return validLines.filter(line => {
+      if (!line.part) return false;
+      const validation = validateQuantity(line.quantity, line.part.stock);
+      return validation.isValid && validation.type === 'info' && line.quantity > 20;
+    });
+  }, [validLines]);
+
   // Send order directly (grouped by supplier)
   const handleSendOrder = useCallback(() => {
     if (validLines.length === 0) {
@@ -668,6 +686,24 @@ export function QuickOrderGrid() {
         variant: 'destructive',
       });
       return;
+    }
+
+    // Check for invalid quantities
+    if (invalidLines.length > 0) {
+      toast({
+        title: 'لا يمكن إرسال الطلب',
+        description: `هناك ${invalidLines.length} قطعة بكميات غير متوفرة. يرجى تعديل الكميات.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Warning for large orders
+    if (largeOrderLines.length > 0) {
+      toast({
+        title: 'ملاحظة',
+        description: `هناك ${largeOrderLines.length} قطعة بكميات كبيرة. سيتم التواصل معك لتأكيد التوفر.`,
+      });
     }
 
     // Create and send separate orders for each supplier
@@ -702,7 +738,7 @@ export function QuickOrderGrid() {
     // Clear all lines
     setLines(Array.from({ length: 10 }, () => createEmptyLine()));
     setCustomerNotes('');
-  }, [validLines, supplierGroups, customerNotes, toast]);
+  }, [validLines, invalidLines, largeOrderLines, supplierGroups, customerNotes, toast]);
 
   // Update ref when handleSendOrder changes
   useEffect(() => {
@@ -759,6 +795,28 @@ export function QuickOrderGrid() {
               <X className="h-4 w-4" />
               إغلاق
             </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Invalid Quantities Warning */}
+      {invalidLines.length > 0 && (
+        <Alert className="border-destructive bg-destructive/10">
+          <AlertCircle className="h-4 w-4 text-destructive" />
+          <AlertDescription className="text-destructive font-medium">
+            ⚠️ هناك {invalidLines.length} قطعة بكميات غير متوفرة: {' '}
+            {invalidLines.map(l => l.part?.partNumber).join('، ')}
+            {' '}- يرجى تعديل الكميات قبل إرسال الطلب.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Large Orders Info */}
+      {largeOrderLines.length > 0 && invalidLines.length === 0 && (
+        <Alert className="border-blue-500 bg-blue-50 dark:bg-blue-900/20">
+          <AlertCircle className="h-4 w-4 text-blue-600" />
+          <AlertDescription className="text-blue-700 dark:text-blue-400 font-medium">
+            ℹ️ هناك {largeOrderLines.length} قطعة بكميات كبيرة. سيتم التواصل معك لتأكيد التوفر بعد إرسال الطلب.
           </AlertDescription>
         </Alert>
       )}
@@ -1138,9 +1196,16 @@ export function QuickOrderGrid() {
                 size="lg" 
                 onClick={handleSendOrder} 
                 className="gap-2"
+                disabled={invalidLines.length > 0}
+                title={invalidLines.length > 0 ? 'يرجى تعديل الكميات غير المتوفرة' : ''}
               >
                 <Send className="h-5 w-5" />
                 إرسال الطلب
+                {invalidLines.length > 0 && (
+                  <Badge variant="destructive" className="mr-1 text-xs">
+                    {invalidLines.length} خطأ
+                  </Badge>
+                )}
               </Button>
             </div>
           </div>
