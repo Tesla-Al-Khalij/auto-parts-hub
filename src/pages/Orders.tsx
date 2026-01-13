@@ -16,13 +16,18 @@ import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
+type SortField = 'date' | 'orderNumber' | 'total' | 'itemsCount';
+type SortDirection = 'asc' | 'desc';
+
 export default function Orders() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
   const [dateTo, setDateTo] = useState<Date | undefined>();
-  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('table');
+  const [sortField, setSortField] = useState<SortField>('date');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -38,8 +43,18 @@ export default function Orders() {
 
   const hasActiveFilters = searchQuery || statusFilter !== 'all' || dateFrom || dateTo;
 
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('desc');
+    }
+    setCurrentPage(1);
+  };
+
   const filteredOrders = useMemo(() => {
-    return mockOrders.filter(order => {
+    const filtered = mockOrders.filter(order => {
       // Search filter
       const matchesSearch = !searchQuery || 
         order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -64,7 +79,27 @@ export default function Orders() {
 
       return matchesSearch && matchesTab && matchesStatus && matchesDateFrom && matchesDateTo;
     });
-  }, [searchQuery, activeTab, statusFilter, dateFrom, dateTo]);
+
+    // Sort
+    return filtered.sort((a, b) => {
+      let comparison = 0;
+      switch (sortField) {
+        case 'date':
+          comparison = new Date(a.date).getTime() - new Date(b.date).getTime();
+          break;
+        case 'orderNumber':
+          comparison = a.orderNumber.localeCompare(b.orderNumber);
+          break;
+        case 'total':
+          comparison = a.total - b.total;
+          break;
+        case 'itemsCount':
+          comparison = a.items.length - b.items.length;
+          break;
+      }
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+  }, [searchQuery, activeTab, statusFilter, dateFrom, dateTo, sortField, sortDirection]);
 
   // Paginated orders
   const totalItems = filteredOrders.length;
@@ -245,7 +280,13 @@ export default function Orders() {
                     ))}
                   </div>
                 ) : (
-                  <OrdersTable orders={paginatedOrders} />
+                  <OrdersTable 
+                    orders={paginatedOrders} 
+                    startIndex={startIndex}
+                    sortField={sortField}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
                 )}
                 
                 {/* Pagination */}
