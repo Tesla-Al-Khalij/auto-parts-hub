@@ -48,11 +48,10 @@ export default function OrderDetails() {
   const currentStepIndex = getStepIndex(order.status);
   const isCancelled = order.status === 'cancelled';
 
-  const formattedDate = new Date(order.date).toLocaleDateString('ar-SA', {
+  const formattedDate = new Date(order.date).toLocaleDateString('en-US', {
     year: 'numeric',
-    month: 'long',
+    month: 'short',
     day: 'numeric',
-    weekday: 'long',
   });
 
   const copyOrderNumber = () => {
@@ -101,7 +100,7 @@ export default function OrderDetails() {
               {/* Total */}
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">الإجمالي</p>
-                <p className="font-bold text-lg text-primary">{order.total.toLocaleString('ar-SA')} ر.س</p>
+                <p className="font-bold text-lg text-primary">{order.total.toLocaleString('en-US')} ر.س</p>
               </div>
             </div>
 
@@ -202,9 +201,9 @@ export default function OrderDetails() {
                   </div>
                   <div className="text-left">
                     <p className="text-sm text-muted-foreground">
-                      {item.unitPrice.toLocaleString('ar-SA')} × {item.quantity}
+                      {item.unitPrice.toLocaleString('en-US')} × {item.quantity}
                     </p>
-                    <p className="font-bold text-lg">{item.total.toLocaleString('ar-SA')} ر.س</p>
+                    <p className="font-bold text-lg">{item.total.toLocaleString('en-US')} ر.س</p>
                   </div>
                 </div>
               ))}
@@ -216,16 +215,16 @@ export default function OrderDetails() {
             <div className="space-y-3">
               <div className="flex justify-between text-muted-foreground">
                 <span>المجموع الفرعي</span>
-                <span>{order.subtotal.toLocaleString('ar-SA')} ر.س</span>
+                <span>{order.subtotal.toLocaleString('en-US')} ر.س</span>
               </div>
               <div className="flex justify-between text-muted-foreground">
                 <span>ضريبة القيمة المضافة (15%)</span>
-                <span>{order.vat.toLocaleString('ar-SA')} ر.س</span>
+                <span>{order.vat.toLocaleString('en-US')} ر.س</span>
               </div>
               <Separator />
               <div className="flex justify-between text-xl font-bold">
                 <span>الإجمالي</span>
-                <span className="text-primary">{order.total.toLocaleString('ar-SA')} ر.س</span>
+                <span className="text-primary">{order.total.toLocaleString('en-US')} ر.س</span>
               </div>
             </div>
           </CardContent>
