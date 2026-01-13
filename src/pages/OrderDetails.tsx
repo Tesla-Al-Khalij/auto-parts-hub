@@ -71,25 +71,51 @@ export default function OrderDetails() {
           </Button>
         </Link>
 
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold">{order.orderNumber}</h1>
-              <Button variant="ghost" size="icon" onClick={copyOrderNumber}>
-                <Copy className="h-4 w-4" />
+        {/* Order Info Grid */}
+        <Card>
+          <CardContent className="p-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              {/* Order Number */}
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">رقم الطلب</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-bold text-lg">{order.orderNumber}</p>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={copyOrderNumber}>
+                    <Copy className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Date */}
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">تاريخ الطلب</p>
+                <p className="font-bold text-lg">{formattedDate}</p>
+              </div>
+
+              {/* Items Count */}
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">عدد القطع</p>
+                <p className="font-bold text-lg">{order.items.length} قطع</p>
+              </div>
+
+              {/* Total */}
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">الإجمالي</p>
+                <p className="font-bold text-lg text-primary">{order.total.toLocaleString('ar-SA')} ر.س</p>
+              </div>
+            </div>
+
+            <Separator className="my-4" />
+
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <OrderStatusBadge status={order.status} size="lg" />
+              <Button variant="outline" className="gap-2">
+                <Printer className="h-4 w-4" />
+                طباعة
               </Button>
             </div>
-            <p className="text-muted-foreground">{formattedDate}</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <OrderStatusBadge status={order.status} size="lg" />
-            <Button variant="outline" className="gap-2">
-              <Printer className="h-4 w-4" />
-              طباعة
-            </Button>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
         {/* Order tracking timeline */}
         {!order.isDraft && (
