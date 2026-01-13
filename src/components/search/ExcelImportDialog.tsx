@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, ArrowRight, Search } from 'lucide-react';
+import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, ArrowRight, Search, ClipboardPaste } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -21,6 +21,8 @@ import { Part } from '@/types';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface ExcelRow {
   data: string[];
@@ -55,6 +57,7 @@ export function ExcelImportDialog({
   const [partNumberColumn, setPartNumberColumn] = useState<string>('');
   const [quantityColumn, setQuantityColumn] = useState<string>('none');
   const [processedItems, setProcessedItems] = useState<ProcessedItem[]>([]);
+  const [pastedData, setPastedData] = useState<string>('');
 
   // Reset state when dialog closes
   const handleOpenChange = useCallback((newOpen: boolean) => {
@@ -65,6 +68,7 @@ export function ExcelImportDialog({
       setPartNumberColumn('');
       setQuantityColumn('none');
       setProcessedItems([]);
+      setPastedData('');
     }
     onOpenChange(newOpen);
   }, [onOpenChange]);
@@ -104,6 +108,49 @@ export function ExcelImportDialog({
     reader.readAsText(file);
     event.target.value = '';
   }, []);
+
+  // Handle paste from Excel
+  const handlePasteData = useCallback(() => {
+    if (!pastedData.trim()) return;
+
+    const lines = pastedData
+      .split(/[\n\r]+/)
+      .map(line => line.trim())
+      .filter(line => line.length > 0);
+
+    if (lines.length > 0) {
+      // Detect delimiter
+      const firstLine = lines[0];
+      let delimiter = '\t'; // Excel usually uses tab
+      if (!firstLine.includes('\t')) {
+        if (firstLine.includes(',')) delimiter = ',';
+        else if (firstLine.includes(';')) delimiter = ';';
+      }
+
+      // Parse all rows
+      const parsedRows = lines.map(line => ({
+        data: line.split(delimiter).map(cell => cell.trim()),
+      }));
+
+      // Check if first row looks like headers
+      const firstRow = parsedRows[0].data;
+      const hasHeaders = firstRow.some(cell => 
+        isNaN(Number(cell)) && cell.length > 0
+      );
+
+      if (hasHeaders) {
+        setHeaders(firstRow);
+        setRawData(parsedRows.slice(1));
+      } else {
+        // Generate generic headers
+        const genericHeaders = firstRow.map((_, i) => `عمود ${i + 1}`);
+        setHeaders(genericHeaders);
+        setRawData(parsedRows);
+      }
+      
+      setStep('columns');
+    }
+  }, [pastedData]);
 
   // Find matching parts and alternatives
   const findMatches = useCallback((partNumber: string): { exact: Part | null; alternatives: Part[] } => {
@@ -231,28 +278,68 @@ export function ExcelImportDialog({
         <div className="flex-1 overflow-auto py-4">
           {/* Step 1: Upload */}
           {step === 'upload' && (
-            <div className="flex flex-col items-center justify-center py-12 space-y-6">
-              <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center">
-                <Upload className="h-10 w-10 text-primary" />
-              </div>
-              <div className="text-center space-y-2">
-                <h3 className="text-lg font-medium">رفع ملف Excel أو CSV</h3>
-                <p className="text-sm text-muted-foreground">
-                  يدعم ملفات CSV و TXT مفصولة بفاصلة أو Tab
-                </p>
-              </div>
-              <label className="cursor-pointer">
-                <input
-                  type="file"
-                  accept=".csv,.txt,.xlsx,.xls"
-                  className="hidden"
-                  onChange={handleFileUpload}
-                />
-                <div className="px-6 py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors">
-                  اختر ملف
+            <Tabs defaultValue="paste" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-6">
+                <TabsTrigger value="paste" className="gap-2">
+                  <ClipboardPaste className="h-4 w-4" />
+                  لصق من Excel
+                </TabsTrigger>
+                <TabsTrigger value="file" className="gap-2">
+                  <Upload className="h-4 w-4" />
+                  رفع ملف
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Paste Tab */}
+              <TabsContent value="paste" className="space-y-4">
+                <div className="space-y-2">
+                  <Label>الصق البيانات من Excel هنا (Ctrl+V)</Label>
+                  <Textarea
+                    value={pastedData}
+                    onChange={(e) => setPastedData(e.target.value)}
+                    placeholder="حدد البيانات في Excel ثم انسخها (Ctrl+C) والصقها هنا..."
+                    className="min-h-[200px] font-mono text-sm"
+                    dir="ltr"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    يدعم البيانات المفصولة بـ Tab أو فاصلة
+                  </p>
                 </div>
-              </label>
-            </div>
+                <Button 
+                  onClick={handlePasteData}
+                  disabled={!pastedData.trim()}
+                  className="w-full"
+                >
+                  معالجة البيانات
+                </Button>
+              </TabsContent>
+
+              {/* File Tab */}
+              <TabsContent value="file">
+                <div className="flex flex-col items-center justify-center py-12 space-y-6">
+                  <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Upload className="h-10 w-10 text-primary" />
+                  </div>
+                  <div className="text-center space-y-2">
+                    <h3 className="text-lg font-medium">رفع ملف Excel أو CSV</h3>
+                    <p className="text-sm text-muted-foreground">
+                      يدعم ملفات CSV و TXT مفصولة بفاصلة أو Tab
+                    </p>
+                  </div>
+                  <label className="cursor-pointer">
+                    <input
+                      type="file"
+                      accept=".csv,.txt,.xlsx,.xls"
+                      className="hidden"
+                      onChange={handleFileUpload}
+                    />
+                    <div className="px-6 py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors">
+                      اختر ملف
+                    </div>
+                  </label>
+                </div>
+              </TabsContent>
+            </Tabs>
           )}
 
           {/* Step 2: Column Selection */}
