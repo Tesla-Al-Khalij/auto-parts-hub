@@ -18,9 +18,9 @@ export function OrderCard({ order }: OrderCardProps) {
   const [showNotes, setShowNotes] = useState(false);
   const { toast } = useToast();
 
-  const formattedDate = new Date(order.date).toLocaleDateString('ar-SA', {
+  const formattedDate = new Date(order.date).toLocaleDateString('en-US', {
     year: 'numeric',
-    month: 'long',
+    month: 'short',
     day: 'numeric',
   });
 
@@ -72,7 +72,7 @@ export function OrderCard({ order }: OrderCardProps) {
               <span className="text-muted-foreground">
                 {item.name} × {item.quantity}
               </span>
-              <span className="font-medium">{item.total.toLocaleString('ar-SA')} ر.س</span>
+              <span className="font-medium">{item.total.toLocaleString('en-US')} ر.س</span>
             </div>
           ))}
           {order.items.length > 2 && (
@@ -86,7 +86,7 @@ export function OrderCard({ order }: OrderCardProps) {
         <div className="flex items-center justify-between pt-3 border-t">
           <span className="font-medium">الإجمالي (شامل الضريبة)</span>
           <span className="text-xl font-bold text-primary">
-            {order.total.toLocaleString('ar-SA')} ر.س
+            {order.total.toLocaleString('en-US')} ر.س
           </span>
         </div>
 

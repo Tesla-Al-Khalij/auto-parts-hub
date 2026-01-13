@@ -66,7 +66,7 @@ export function OrdersTable({ orders, startIndex = 0, sortField, sortDirection, 
         </TableHeader>
         <TableBody>
           {orders.map((order, index) => {
-            const formattedDate = new Date(order.date).toLocaleDateString('ar-SA', {
+            const formattedDate = new Date(order.date).toLocaleDateString('en-US', {
               year: 'numeric',
               month: 'short',
               day: 'numeric',
