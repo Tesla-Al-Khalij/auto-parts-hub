@@ -1,22 +1,44 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, FileEdit, Send } from 'lucide-react';
+import { ChevronLeft, FileEdit, Send, Save, FileText } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Order } from '@/types';
 import { OrderStatusBadge } from './OrderStatusBadge';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 interface OrderCardProps {
   order: Order;
 }
 
 export function OrderCard({ order }: OrderCardProps) {
+  const [notes, setNotes] = useState(order.notes || '');
+  const [showNotes, setShowNotes] = useState(false);
+  const { toast } = useToast();
+
   const formattedDate = new Date(order.date).toLocaleDateString('ar-SA', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
   });
+
+  const handleSaveAsDraft = () => {
+    console.log('Saving as draft:', { orderId: order.id, notes });
+    toast({
+      title: 'تم حفظ المسودة',
+      description: `تم حفظ الطلب ${order.orderNumber} كمسودة`,
+    });
+  };
+
+  const handleSendOrder = () => {
+    console.log('Sending order:', { orderId: order.id, notes });
+    toast({
+      title: 'تم إرسال الطلب',
+      description: `تم إرسال الطلب ${order.orderNumber} للمورد`,
+    });
+  };
 
   return (
     <Card className={cn(
@@ -68,20 +90,50 @@ export function OrderCard({ order }: OrderCardProps) {
           </span>
         </div>
 
+        {/* Notes section for drafts */}
+        {order.isDraft && (
+          <div className="space-y-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-2 text-muted-foreground"
+              onClick={() => setShowNotes(!showNotes)}
+            >
+              <FileText className="h-4 w-4" />
+              {showNotes ? 'إخفاء الملاحظات' : 'إضافة ملاحظات'}
+            </Button>
+            {showNotes && (
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="أضف ملاحظات للمورد..."
+                className="w-full min-h-[60px] p-2 text-sm rounded-md border border-input bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                dir="rtl"
+              />
+            )}
+          </div>
+        )}
+
         {/* Actions */}
         <div className="flex gap-2">
           {order.isDraft ? (
             <>
-              <Button variant="default" className="flex-1 h-12 gap-2">
+              <Button 
+                variant="default" 
+                className="flex-1 h-12 gap-2"
+                onClick={handleSendOrder}
+              >
                 <Send className="h-4 w-4" />
                 إرسال الطلب
               </Button>
-              <Link to={`/orders/${order.id}`} className="flex-1">
-                <Button variant="outline" className="w-full h-12 gap-2">
-                  <FileEdit className="h-4 w-4" />
-                  تعديل
-                </Button>
-              </Link>
+              <Button 
+                variant="outline" 
+                className="flex-1 h-12 gap-2"
+                onClick={handleSaveAsDraft}
+              >
+                <Save className="h-4 w-4" />
+                حفظ
+              </Button>
             </>
           ) : (
             <Link to={`/orders/${order.id}`} className="w-full">

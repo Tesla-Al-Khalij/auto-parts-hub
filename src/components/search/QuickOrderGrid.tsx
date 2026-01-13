@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
-import { Plus, Trash2, Package, Keyboard, Copy, Save, Send, FileText } from 'lucide-react';
+import { Plus, Trash2, Package, Keyboard, Copy, Save, Send, FileText, Upload, FileSpreadsheet } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { mockSuppliers } from '@/data/mockData';
@@ -467,15 +467,113 @@ export function QuickOrderGrid() {
     handleSaveOrderRef.current = handleSendOrder;
   }, [handleSendOrder]);
 
+  // Handle Excel file import
+  const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      const importedLines = text
+        .split(/[\n\r]+/)
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .map(line => {
+          // Try to parse as: partNumber, quantity (comma or tab separated)
+          const parts = line.split(/[,\t;]+/).map(p => p.trim());
+          const partNumber = parts[0] || '';
+          const quantity = parseInt(parts[1]) || 1;
+          
+          // Find matching part
+          const matchedPart = partNumber.length >= 2 
+            ? (partsData.find(p => p.partNumber.toLowerCase() === partNumber.toLowerCase()) || null)
+            : null;
+          
+          // Get supplier info if part found
+          let selectedSupplierId: string | null = null;
+          let selectedPrice = 0;
+          if (matchedPart) {
+            const firstSupplier = matchedPart.supplierPrices?.[0];
+            if (firstSupplier) {
+              selectedSupplierId = firstSupplier.supplierId;
+              selectedPrice = firstSupplier.price;
+            } else {
+              selectedPrice = matchedPart.price;
+            }
+          }
+          
+          return {
+            id: crypto.randomUUID(),
+            partNumber,
+            part: matchedPart,
+            quantity,
+            suggestions: [],
+            showSuggestions: false,
+            highlightedIndex: -1,
+            selectedSupplierId,
+            selectedPrice,
+          };
+        });
+      
+      if (importedLines.length > 0) {
+        setLines(prev => {
+          // Add imported lines, replacing empty lines
+          const emptyCount = prev.filter(l => !l.partNumber && !l.part).length;
+          if (emptyCount >= importedLines.length) {
+            // Replace empty lines
+            const newLines = [...prev];
+            let importIdx = 0;
+            for (let i = 0; i < newLines.length && importIdx < importedLines.length; i++) {
+              if (!newLines[i].partNumber && !newLines[i].part) {
+                newLines[i] = importedLines[importIdx];
+                importIdx++;
+              }
+            }
+            return newLines;
+          } else {
+            // Add to end
+            return [...prev.filter(l => l.partNumber || l.part), ...importedLines];
+          }
+        });
+        
+        const matchedCount = importedLines.filter(l => l.part).length;
+        toast({
+          title: 'تم استيراد الملف',
+          description: `تم استيراد ${importedLines.length} سطر، ${matchedCount} قطعة مطابقة`,
+        });
+      }
+    };
+    reader.readAsText(file);
+    
+    // Reset input
+    event.target.value = '';
+  }, [parts, toast]);
+
+  // Alias for parts data
+  const partsData = parts;
+
   return (
     <div className="space-y-4" dir="rtl" ref={containerRef}>
-      {/* Keyboard shortcuts hint */}
-      <div className="flex items-center justify-between bg-muted/50 rounded-lg px-4 py-2 border border-border">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Keyboard className="h-4 w-4" />
-          <span>اختصارات:</span>
-        </div>
+      {/* Excel Import & Keyboard shortcuts */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        {/* Excel import */}
+        <label className="flex items-center gap-2 px-4 py-2 bg-primary/10 hover:bg-primary/20 rounded-lg cursor-pointer transition-colors border border-primary/20">
+          <FileSpreadsheet className="h-5 w-5 text-primary" />
+          <span className="font-medium text-primary">رفع ملف Excel</span>
+          <input
+            type="file"
+            accept=".csv,.txt,.xlsx,.xls"
+            className="hidden"
+            onChange={handleFileUpload}
+          />
+        </label>
+
+        {/* Keyboard shortcuts hint */}
         <div className="flex items-center gap-3 text-xs">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Keyboard className="h-4 w-4" />
+          </div>
           <Badge variant="outline" className="gap-1">
             <span className="font-mono">F11</span>
             <span className="text-muted-foreground">صف جديد</span>
@@ -490,7 +588,7 @@ export function QuickOrderGrid() {
           </Badge>
           <Badge variant="outline" className="gap-1">
             <span className="font-mono">Ctrl+Enter</span>
-            <span className="text-muted-foreground">حفظ الطلب</span>
+            <span className="text-muted-foreground">إرسال</span>
           </Badge>
         </div>
       </div>
