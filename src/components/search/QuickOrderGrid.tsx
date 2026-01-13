@@ -398,7 +398,7 @@ export function QuickOrderGrid() {
   const handleKeyDown = useCallback((e: React.KeyboardEvent, index: number, field: 'partNumber' | 'quantity') => {
     const line = lines[index];
     
-    // Handle suggestions navigation
+    // Handle suggestions navigation (only when dropdown is open)
     if (field === 'partNumber' && line.showSuggestions && line.suggestions.length > 0) {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
@@ -445,6 +445,32 @@ export function QuickOrderGrid() {
       }
     }
     
+    // Arrow Up/Down navigation between rows (when no suggestions open)
+    if (e.key === 'ArrowUp' && !line.showSuggestions) {
+      e.preventDefault();
+      if (index > 0) {
+        inputRefs.current[index - 1]?.focus();
+        setFocusedIndex(index - 1);
+      }
+      return;
+    }
+    
+    if (e.key === 'ArrowDown' && !line.showSuggestions) {
+      e.preventDefault();
+      if (index < lines.length - 1) {
+        inputRefs.current[index + 1]?.focus();
+        setFocusedIndex(index + 1);
+      } else {
+        // Add more rows if at the end
+        setLines(prev => [...prev, ...Array.from({ length: 3 }, () => createEmptyLine())]);
+        setTimeout(() => {
+          inputRefs.current[index + 1]?.focus();
+          setFocusedIndex(index + 1);
+        }, 50);
+      }
+      return;
+    }
+    
     // Move to next row on Enter/Tab from quantity
     if (e.key === 'Enter' || e.key === 'Tab') {
       if (field === 'quantity') {
@@ -452,10 +478,12 @@ export function QuickOrderGrid() {
         const nextIndex = index + 1;
         if (nextIndex < lines.length) {
           inputRefs.current[nextIndex]?.focus();
+          setFocusedIndex(nextIndex);
         } else {
-          setLines(prev => [...prev, ...Array.from({ length: 5 }, () => createEmptyLine())]);
+          setLines(prev => [...prev, ...Array.from({ length: 3 }, () => createEmptyLine())]);
           setTimeout(() => {
             inputRefs.current[nextIndex]?.focus();
+            setFocusedIndex(nextIndex);
           }, 50);
         }
       }
