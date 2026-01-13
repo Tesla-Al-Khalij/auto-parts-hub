@@ -259,7 +259,9 @@ export default function OrderDetails() {
               ))}
             </div>
 
-            <Separator className="my-6 mx-4" />
+            <div className="px-4 my-6">
+              <Separator />
+            </div>
 
             {/* Totals */}
             <div className="space-y-3 px-4 pb-4">
