@@ -259,10 +259,10 @@ export default function OrderDetails() {
               ))}
             </div>
 
-            <Separator className="my-6" />
+            <Separator className="my-6 mx-4" />
 
             {/* Totals */}
-            <div className="space-y-3">
+            <div className="space-y-3 px-4 pb-4">
               <div className="flex justify-between text-muted-foreground">
                 <span>المجموع الفرعي</span>
                 <span>{order.subtotal.toLocaleString('en-US')} ر.س</span>
