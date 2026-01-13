@@ -704,7 +704,7 @@ export function QuickOrderGrid() {
       </div>
 
       {/* Grid Header */}
-      <div className="grid grid-cols-[40px_1fr_180px_150px_80px_100px_80px_60px] gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-t-lg font-medium text-sm">
+      <div className="grid grid-cols-[40px_1fr_150px_150px_80px_100px_80px_60px] gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-t-lg font-medium text-sm">
         <div className="text-center">#</div>
         <div>رقم القطعة</div>
         <div>اسم القطعة</div>
@@ -721,7 +721,7 @@ export function QuickOrderGrid() {
           <div
             key={line.id}
             className={cn(
-              "grid grid-cols-[40px_1fr_180px_150px_80px_100px_80px_60px] gap-2 px-3 py-2 items-center transition-colors",
+              "grid grid-cols-[40px_1fr_150px_150px_80px_100px_80px_60px] gap-2 px-3 py-2 items-center transition-colors",
               index % 2 === 0 ? "bg-background" : "bg-muted/30",
               line.part && "bg-primary/5",
               focusedIndex === index && "ring-1 ring-primary/50 bg-primary/5"
@@ -776,7 +776,7 @@ export function QuickOrderGrid() {
                         });
                       }}
                     >
-                      <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0">
                         <div className={cn(
                           "font-mono text-sm",
                           suggestionIndex === line.highlightedIndex ? "text-primary-foreground" : "text-primary"
@@ -786,17 +786,15 @@ export function QuickOrderGrid() {
                           suggestionIndex === line.highlightedIndex ? "text-primary-foreground/80" : "text-muted-foreground"
                         )}>{part.nameAr}</div>
                       </div>
-                      <div className="text-left">
+                      <div className="text-left space-y-0.5">
                         <div className={cn(
-                          "text-sm font-medium",
-                          suggestionIndex === line.highlightedIndex ? "text-primary-foreground" : ""
+                          "text-sm font-bold",
+                          suggestionIndex === line.highlightedIndex ? "text-primary-foreground" : "text-primary"
                         )}>{part.price.toFixed(2)} ر.س</div>
-                        {part.supplierPrices && part.supplierPrices.length > 1 && (
-                          <div className={cn(
-                            "text-xs",
-                            suggestionIndex === line.highlightedIndex ? "text-primary-foreground/70" : "text-muted-foreground"
-                          )}>{part.supplierPrices.length} موردين</div>
-                        )}
+                        <div className={cn(
+                          "text-xs",
+                          suggestionIndex === line.highlightedIndex ? "text-primary-foreground/70" : "text-muted-foreground"
+                        )}>تسلا الخليج</div>
                       </div>
                     </button>
                   ))}
@@ -813,29 +811,12 @@ export function QuickOrderGrid() {
               )}
             </div>
 
-            {/* Supplier dropdown */}
-            <div>
-              {line.part && line.part.supplierPrices && line.part.supplierPrices.length > 0 ? (
-                <Select
-                  value={line.selectedSupplierId || ''}
-                  onValueChange={(value) => handleSupplierChange(index, value)}
-                >
-                  <SelectTrigger className="h-9 text-xs">
-                    <SelectValue placeholder="اختر المورد" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {line.part.supplierPrices.map((sp) => (
-                      <SelectItem key={sp.supplierId} value={sp.supplierId}>
-                        <div className="flex items-center justify-between gap-2 w-full">
-                          <span>{getSupplierName(sp.supplierId)}</span>
-                          <span className="text-primary font-medium">{sp.price.toFixed(2)}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            {/* Supplier name */}
+            <div className="text-sm">
+              {line.part ? (
+                <span className="text-foreground font-medium">تسلا الخليج</span>
               ) : (
-                <span className="text-sm text-muted-foreground">-</span>
+                <span className="text-muted-foreground">-</span>
               )}
             </div>
 
