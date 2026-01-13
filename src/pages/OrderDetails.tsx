@@ -4,6 +4,7 @@ import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 import { OrderStatusBadge } from '@/components/orders/OrderStatusBadge';
 import { mockOrders } from '@/data/mockData';
 import { OrderStatus } from '@/types';
@@ -184,26 +185,75 @@ export default function OrderDetails() {
           </Card>
         )}
 
-        {/* Order items */}
+        {/* Order items - Grid style like QuickOrderGrid */}
         <Card>
           <CardHeader>
             <CardTitle>تفاصيل الطلب ({order.items.length} قطع)</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+          <CardContent className="p-0">
+            {/* Desktop Grid */}
+            <div className="hidden md:block">
+              {/* Header */}
+              <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-muted/50 text-sm font-medium text-muted-foreground border-b">
+                <div className="col-span-3 text-right">رقم القطعة</div>
+                <div className="col-span-4 text-right">اسم القطعة</div>
+                <div className="col-span-1 text-center">الكمية</div>
+                <div className="col-span-2 text-left">السعر</div>
+                <div className="col-span-2 text-left">المجموع</div>
+              </div>
+              
+              {/* Rows */}
               {order.items.map((item, index) => (
-                <div key={index} className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                  <div className="space-y-1">
-                    <code className="text-primary bg-primary/10 px-2 py-0.5 rounded text-sm font-bold">
+                <div 
+                  key={index}
+                  className={cn(
+                    "grid grid-cols-12 gap-2 px-4 py-3 items-center border-b last:border-b-0",
+                    index % 2 === 0 ? "bg-background" : "bg-muted/30"
+                  )}
+                >
+                  <div className="col-span-3">
+                    <code className="text-primary bg-primary/10 px-2 py-1 rounded text-sm font-bold">
                       {item.partNumber}
                     </code>
-                    <p className="font-medium">{item.name}</p>
                   </div>
-                  <div className="text-left">
-                    <p className="text-sm text-muted-foreground">
+                  <div className="col-span-4 font-medium text-right">
+                    {item.name}
+                  </div>
+                  <div className="col-span-1 text-center">
+                    <Badge variant="secondary" className="font-bold">
+                      {item.quantity}
+                    </Badge>
+                  </div>
+                  <div className="col-span-2 text-left text-muted-foreground">
+                    {item.unitPrice.toLocaleString('en-US')} ر.س
+                  </div>
+                  <div className="col-span-2 text-left font-bold text-primary">
+                    {item.total.toLocaleString('en-US')} ر.س
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Mobile Cards */}
+            <div className="md:hidden divide-y">
+              {order.items.map((item, index) => (
+                <div key={index} className="p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <code className="text-primary bg-primary/10 px-2 py-1 rounded text-sm font-bold">
+                      {item.partNumber}
+                    </code>
+                    <Badge variant="secondary" className="font-bold">
+                      {item.quantity} ×
+                    </Badge>
+                  </div>
+                  <p className="font-medium">{item.name}</p>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">
                       {item.unitPrice.toLocaleString('en-US')} × {item.quantity}
-                    </p>
-                    <p className="font-bold text-lg">{item.total.toLocaleString('en-US')} ر.س</p>
+                    </span>
+                    <span className="font-bold text-primary">
+                      {item.total.toLocaleString('en-US')} ر.س
+                    </span>
                   </div>
                 </div>
               ))}
