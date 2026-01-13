@@ -1,14 +1,16 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
-import { Plus, Trash2, Package, Keyboard, Copy, Save, Send, FileText, FileSpreadsheet } from 'lucide-react';
+import { Plus, Trash2, Package, Keyboard, Copy, Save, Send, FileText, FileSpreadsheet, Eye, ChevronDown, ChevronUp } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { mockSuppliers } from '@/data/mockData';
+import { mockSuppliers, mockOrders } from '@/data/mockData';
 import { useCachedParts } from '@/hooks/useCachedParts';
-import { Part } from '@/types';
+import { Part, Order } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { ExcelImportDialog } from './ExcelImportDialog';
+import { OrderDetailsDialog } from '@/components/orders/OrderDetailsDialog';
+import { OrderStatusBadge } from '@/components/orders/OrderStatusBadge';
 import {
   Select,
   SelectContent,
@@ -55,6 +57,9 @@ export function QuickOrderGrid() {
   const [focusedIndex, setFocusedIndex] = useState<number>(0);
   const [customerNotes, setCustomerNotes] = useState<string>('');
   const [excelDialogOpen, setExcelDialogOpen] = useState(false);
+  const [showRecentOrders, setShowRecentOrders] = useState(true);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [orderDetailsOpen, setOrderDetailsOpen] = useState(false);
   const { toast } = useToast();
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -501,8 +506,26 @@ export function QuickOrderGrid() {
     handleSaveOrderRef.current = handleSendOrder;
   }, [handleSendOrder]);
 
+  // Get recent orders (last 5)
+  const recentOrders = useMemo(() => 
+    [...mockOrders].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5),
+    []
+  );
+
+  const handleViewOrder = (order: Order) => {
+    setSelectedOrder(order);
+    setOrderDetailsOpen(true);
+  };
+
   return (
     <div className="space-y-4" dir="rtl" ref={containerRef}>
+      {/* Order Details Dialog */}
+      <OrderDetailsDialog 
+        order={selectedOrder} 
+        open={orderDetailsOpen} 
+        onOpenChange={setOrderDetailsOpen} 
+      />
+
       {/* Excel Import Dialog */}
       <ExcelImportDialog
         open={excelDialogOpen}
@@ -546,6 +569,65 @@ export function QuickOrderGrid() {
           </Badge>
         </div>
       </div>
+
+      {/* Recent Orders Section */}
+      <div className="border border-border rounded-lg overflow-hidden">
+        <button 
+          onClick={() => setShowRecentOrders(!showRecentOrders)}
+          className="w-full flex items-center justify-between px-4 py-3 bg-muted/50 hover:bg-muted transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <Package className="h-5 w-5 text-primary" />
+            <span className="font-medium">الطلبات الأخيرة</span>
+            <Badge variant="secondary" className="text-xs">{recentOrders.length}</Badge>
+          </div>
+          {showRecentOrders ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+        </button>
+        
+        {showRecentOrders && (
+          <div className="divide-y divide-border">
+            {recentOrders.map((order) => {
+              const formattedDate = new Date(order.date).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+              });
+              
+              return (
+                <div 
+                  key={order.id} 
+                  className="flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors"
+                >
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <p className="font-bold">{order.orderNumber}</p>
+                      <p className="text-sm text-muted-foreground">{formattedDate}</p>
+                    </div>
+                    <div className="text-sm">
+                      <span className="text-muted-foreground">{order.items.length} قطعة</span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-4">
+                    <OrderStatusBadge status={order.status} />
+                    <span className="font-bold text-primary">{order.total.toLocaleString('en-US')} ر.س</span>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="gap-2"
+                      onClick={() => handleViewOrder(order)}
+                    >
+                      <Eye className="h-4 w-4" />
+                      عرض
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       {/* Grid Header */}
       <div className="grid grid-cols-[40px_1fr_180px_150px_80px_100px_80px_60px] gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-t-lg font-medium text-sm">
         <div className="text-center">#</div>
