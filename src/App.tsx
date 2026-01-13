@@ -25,6 +25,7 @@ import AdminSupplierStocks from "./pages/admin/AdminSupplierStocks";
 import AdminUserRoles from "./pages/admin/AdminUserRoles";
 import AdminReports from "./pages/admin/AdminReports";
 import AdminSettings from "./pages/admin/AdminSettings";
+import QuickOrder from "./pages/QuickOrder";
 
 const queryClient = new QueryClient();
 
@@ -40,6 +41,7 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
+              <Route path="/quick-order" element={<QuickOrder />} />
               <Route path="/login" element={<Login />} />
               <Route path="/cart" element={<Cart />} />
               <Route path="/orders" element={<Orders />} />
