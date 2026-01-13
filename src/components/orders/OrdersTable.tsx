@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Eye, FileEdit, Send } from 'lucide-react';
+import { Eye, FileEdit, Send, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Order } from '@/types';
@@ -13,26 +13,59 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
+type SortField = 'date' | 'orderNumber' | 'total' | 'itemsCount';
+type SortDirection = 'asc' | 'desc';
+
 interface OrdersTableProps {
   orders: Order[];
+  startIndex?: number;
+  sortField?: SortField;
+  sortDirection?: SortDirection;
+  onSort?: (field: SortField) => void;
 }
 
-export function OrdersTable({ orders }: OrdersTableProps) {
+export function OrdersTable({ orders, startIndex = 0, sortField, sortDirection, onSort }: OrdersTableProps) {
+  const SortIcon = ({ field }: { field: SortField }) => {
+    if (sortField !== field) return <ArrowUpDown className="h-4 w-4 mr-1 opacity-50" />;
+    return sortDirection === 'asc' 
+      ? <ArrowUp className="h-4 w-4 mr-1" /> 
+      : <ArrowDown className="h-4 w-4 mr-1" />;
+  };
+
+  const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
+    <button 
+      onClick={() => onSort?.(field)}
+      className="flex items-center gap-1 hover:text-primary transition-colors font-bold"
+    >
+      {children}
+      <SortIcon field={field} />
+    </button>
+  );
+
   return (
     <div className="border rounded-lg overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow className="bg-muted/50">
-            <TableHead className="text-right font-bold">رقم الطلب</TableHead>
-            <TableHead className="text-right font-bold">التاريخ</TableHead>
-            <TableHead className="text-right font-bold">عدد القطع</TableHead>
-            <TableHead className="text-right font-bold">الإجمالي</TableHead>
+            <TableHead className="text-right font-bold w-12">#</TableHead>
+            <TableHead className="text-right">
+              <SortableHeader field="orderNumber">رقم الطلب</SortableHeader>
+            </TableHead>
+            <TableHead className="text-right">
+              <SortableHeader field="date">التاريخ</SortableHeader>
+            </TableHead>
+            <TableHead className="text-right">
+              <SortableHeader field="itemsCount">عدد القطع</SortableHeader>
+            </TableHead>
+            <TableHead className="text-right">
+              <SortableHeader field="total">الإجمالي</SortableHeader>
+            </TableHead>
             <TableHead className="text-right font-bold">الحالة</TableHead>
             <TableHead className="text-center font-bold">الإجراءات</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {orders.map(order => {
+          {orders.map((order, index) => {
             const formattedDate = new Date(order.date).toLocaleDateString('ar-SA', {
               year: 'numeric',
               month: 'short',
@@ -41,6 +74,9 @@ export function OrdersTable({ orders }: OrdersTableProps) {
 
             return (
               <TableRow key={order.id} className="hover:bg-muted/30">
+                <TableCell className="font-medium text-muted-foreground">
+                  {startIndex + index + 1}
+                </TableCell>
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-2">
                     <span className="font-bold">{order.orderNumber}</span>
