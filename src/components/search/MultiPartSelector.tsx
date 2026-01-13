@@ -19,9 +19,31 @@ interface MultiPartSelectorProps {
   placeholder?: string;
 }
 
+// Parse search query for quantity pattern (e.g., "96700-B11004X x5" or "96700-B11004X *5" or "96700-B11004X 5")
+const parseSearchWithQuantity = (query: string): { searchTerm: string; quantity: number } => {
+  // Match patterns like: "partNumber x5", "partNumber *5", "partNumber X5", "partNumber 5"
+  const patterns = [
+    /^(.+?)\s*[xX×]\s*(\d+)$/, // x5, X5, ×5
+    /^(.+?)\s*\*\s*(\d+)$/,    // *5
+    /^(.+?)\s+(\d+)$/,          // space followed by number at end
+  ];
+
+  for (const pattern of patterns) {
+    const match = query.trim().match(pattern);
+    if (match) {
+      return {
+        searchTerm: match[1].trim(),
+        quantity: parseInt(match[2]) || 1
+      };
+    }
+  }
+
+  return { searchTerm: query, quantity: 1 };
+};
+
 export const MultiPartSelector: React.FC<MultiPartSelectorProps> = ({
   onAddToGrid,
-  placeholder = 'ابحث عن القطع بالرقم أو الاسم...'
+  placeholder = 'ابحث بالرقم أو الاسم... (مثال: 96700-B11004X x5)'
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
@@ -29,18 +51,23 @@ export const MultiPartSelector: React.FC<MultiPartSelectorProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Filter parts based on search query
+  // Parse search query for quantity
+  const { searchTerm, quantity: parsedQuantity } = useMemo(() => 
+    parseSearchWithQuantity(searchQuery), [searchQuery]
+  );
+
+  // Filter parts based on search term (without quantity)
   const filteredParts = useMemo(() => {
-    if (!searchQuery.trim()) return mockParts.slice(0, 20);
+    if (!searchTerm.trim()) return mockParts.slice(0, 20);
     
-    const query = searchQuery.toLowerCase();
+    const query = searchTerm.toLowerCase();
     return mockParts.filter(part =>
       part.partNumber.toLowerCase().includes(query) ||
       part.name.toLowerCase().includes(query) ||
-      part.nameAr.includes(searchQuery) ||
+      part.nameAr.includes(searchTerm) ||
       part.brand.toLowerCase().includes(query)
     ).slice(0, 50);
-  }, [searchQuery]);
+  }, [searchTerm]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -54,22 +81,43 @@ export const MultiPartSelector: React.FC<MultiPartSelectorProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleTogglePart = (part: Part) => {
+  const handleTogglePart = (part: Part, customQuantity?: number) => {
     setSelectedParts(prev => {
       const newMap = new Map(prev);
-      if (newMap.has(part.id)) {
+      if (newMap.has(part.id) && !customQuantity) {
         newMap.delete(part.id);
       } else {
         // Default supplier
         const defaultSupplierId = part.supplierPrices?.[0]?.supplierId || mockSuppliers[0]?.id || '';
+        const qty = customQuantity || parsedQuantity || 1;
         newMap.set(part.id, {
           part,
-          quantity: 1,
+          quantity: qty,
           supplierId: defaultSupplierId
         });
       }
       return newMap;
     });
+  };
+
+  // Quick add with Enter key when there's exactly one result
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && filteredParts.length === 1) {
+      e.preventDefault();
+      const part = filteredParts[0];
+      handleTogglePart(part, parsedQuantity);
+      
+      // If part was just added, also add to grid immediately
+      if (!selectedParts.has(part.id)) {
+        const defaultSupplierId = part.supplierPrices?.[0]?.supplierId || mockSuppliers[0]?.id || '';
+        onAddToGrid([{
+          part,
+          quantity: parsedQuantity,
+          supplierId: defaultSupplierId
+        }]);
+        setSearchQuery('');
+      }
+    }
   };
 
   const handleQuantityChange = (partId: string, delta: number) => {
@@ -143,8 +191,18 @@ export const MultiPartSelector: React.FC<MultiPartSelectorProps> = ({
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           onFocus={() => setIsOpen(true)}
+          onKeyDown={handleKeyDown}
           className="pr-10 pl-4"
         />
+        {/* Show parsed quantity indicator */}
+        {parsedQuantity > 1 && searchTerm && (
+          <Badge 
+            variant="secondary" 
+            className="absolute left-24 top-1/2 -translate-y-1/2"
+          >
+            الكمية: {parsedQuantity}
+          </Badge>
+        )}
         {totalSelectedCount > 0 && (
           <Badge 
             variant="default" 
