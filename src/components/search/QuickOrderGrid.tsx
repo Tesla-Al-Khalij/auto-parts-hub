@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
-import { Plus, Trash2, Keyboard, Copy, Save, Send, FileText, FileSpreadsheet, AlertCircle, X, Package } from 'lucide-react';
+import { Plus, Trash2, Keyboard, Copy, Save, Send, FileText, FileSpreadsheet, AlertCircle, X, Package, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { mockSuppliers, mockOrders, mockParts } from '@/data/mockData';
@@ -60,6 +60,9 @@ export function QuickOrderGrid() {
   const [excelDialogOpen, setExcelDialogOpen] = useState(false);
   const [editingDraftId, setEditingDraftId] = useState<string | null>(null);
   const [isReorderMode, setIsReorderMode] = useState(false);
+  const [globalSearch, setGlobalSearch] = useState('');
+  const [showGlobalResults, setShowGlobalResults] = useState(false);
+  const globalSearchRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -476,6 +479,63 @@ export function QuickOrderGrid() {
     [lines]
   );
 
+  // Global search results
+  const globalSearchResults = useMemo(() => {
+    if (globalSearch.length < 2) return [];
+    const searchValue = globalSearch.toLowerCase();
+    return parts.filter(p => 
+      p.partNumber.toLowerCase().includes(searchValue) ||
+      p.name.toLowerCase().includes(searchValue) ||
+      p.nameAr.includes(globalSearch) ||
+      p.category?.toLowerCase().includes(searchValue) ||
+      p.brand?.toLowerCase().includes(searchValue)
+    ).slice(0, 10);
+  }, [globalSearch, parts]);
+
+  // Add part from global search to first empty line
+  const handleAddFromGlobalSearch = useCallback((part: Part) => {
+    const firstSupplier = part.supplierPrices?.[0];
+    
+    setLines(prev => {
+      // Find first empty line
+      const emptyIndex = prev.findIndex(l => !l.partNumber && !l.part);
+      if (emptyIndex >= 0) {
+        const newLines = [...prev];
+        newLines[emptyIndex] = {
+          ...newLines[emptyIndex],
+          partNumber: part.partNumber,
+          part,
+          quantity: 0,
+          suggestions: [],
+          showSuggestions: false,
+          selectedSupplierId: firstSupplier?.supplierId || null,
+          selectedPrice: firstSupplier?.price || part.price,
+        };
+        return newLines;
+      }
+      // If no empty line, add new one
+      return [...prev, {
+        id: crypto.randomUUID(),
+        partNumber: part.partNumber,
+        part,
+        quantity: 0,
+        suggestions: [],
+        showSuggestions: false,
+        highlightedIndex: -1,
+        selectedSupplierId: firstSupplier?.supplierId || null,
+        selectedPrice: firstSupplier?.price || part.price,
+      }];
+    });
+
+    setGlobalSearch('');
+    setShowGlobalResults(false);
+    
+    toast({
+      title: 'تمت إضافة القطعة',
+      description: `${part.nameAr || part.name} - أدخل الكمية المطلوبة`,
+    });
+  }, [toast]);
+
   // Group by supplier for summary
   const supplierGroups = useMemo(() => {
     const groups: Record<string, { supplierName: string; lines: typeof validLines; total: number }> = {};
@@ -646,6 +706,77 @@ export function QuickOrderGrid() {
           </AlertDescription>
         </Alert>
       )}
+
+      {/* Global Parts Search */}
+      <div className="relative">
+        <div className="relative">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <Input
+            ref={globalSearchRef}
+            value={globalSearch}
+            onChange={(e) => {
+              setGlobalSearch(e.target.value);
+              setShowGlobalResults(e.target.value.length >= 2);
+            }}
+            onFocus={() => setShowGlobalResults(globalSearch.length >= 2)}
+            onBlur={() => setTimeout(() => setShowGlobalResults(false), 200)}
+            placeholder="ابحث عن القطع بالاسم أو الرقم أو الفئة أو الماركة..."
+            className="pr-10 text-right bg-background border-primary/30 focus:border-primary"
+            dir="rtl"
+          />
+        </div>
+        
+        {/* Global Search Results Dropdown */}
+        {showGlobalResults && globalSearchResults.length > 0 && (
+          <div className="absolute z-50 top-full mt-1 w-full bg-popover border border-border rounded-lg shadow-lg max-h-80 overflow-auto">
+            {globalSearchResults.map((part) => {
+              const firstSupplier = part.supplierPrices?.[0];
+              return (
+                <button
+                  key={part.id}
+                  type="button"
+                  onClick={() => handleAddFromGlobalSearch(part)}
+                  className="w-full px-4 py-3 text-right hover:bg-accent transition-colors border-b border-border last:border-b-0 flex items-center justify-between gap-4"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="font-mono text-xs">
+                        {part.partNumber}
+                      </Badge>
+                      {part.brand && (
+                        <Badge variant="secondary" className="text-xs">
+                          {part.brand}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="font-medium mt-1">{part.nameAr || part.name}</div>
+                    {part.category && (
+                      <div className="text-xs text-muted-foreground">{part.category}</div>
+                    )}
+                  </div>
+                  <div className="text-left">
+                    <div className="font-bold text-primary">
+                      {(firstSupplier?.price || part.price).toFixed(2)} ر.س
+                    </div>
+                    {firstSupplier && (
+                      <div className="text-xs text-muted-foreground">
+                        {getSupplierName(firstSupplier.supplierId)}
+                      </div>
+                    )}
+                  </div>
+                  <Plus className="h-5 w-5 text-primary" />
+                </button>
+              );
+            })}
+          </div>
+        )}
+        
+        {showGlobalResults && globalSearch.length >= 2 && globalSearchResults.length === 0 && (
+          <div className="absolute z-50 top-full mt-1 w-full bg-popover border border-border rounded-lg shadow-lg p-4 text-center text-muted-foreground">
+            لا توجد نتائج للبحث "{globalSearch}"
+          </div>
+        )}
+      </div>
 
       {/* Excel Import & Keyboard shortcuts */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
