@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
-import { Plus, Trash2, Package, Keyboard, Copy, Save } from 'lucide-react';
+import { Plus, Trash2, Package, Keyboard, Copy, Save, Send, FileText } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { mockSuppliers } from '@/data/mockData';
@@ -53,6 +53,7 @@ export function QuickOrderGrid() {
     Array.from({ length: 10 }, () => createEmptyLine())
   );
   const [focusedIndex, setFocusedIndex] = useState<number>(0);
+  const [customerNotes, setCustomerNotes] = useState<string>('');
   // Cart context removed - orders saved directly
   const { toast } = useToast();
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -114,6 +115,7 @@ export function QuickOrderGrid() {
   // Clear all rows
   const handleClearAll = useCallback(() => {
     setLines(Array.from({ length: 10 }, () => createEmptyLine()));
+    setCustomerNotes('');
     inputRefs.current[0]?.focus();
     toast({
       title: 'تم مسح الكل',
@@ -371,8 +373,8 @@ export function QuickOrderGrid() {
     [validLines]
   );
 
-  // Save order directly (grouped by supplier)
-  const handleSaveOrder = useCallback(() => {
+  // Save order as draft (grouped by supplier)
+  const handleSaveAsDraft = useCallback(() => {
     if (validLines.length === 0) {
       toast({
         title: 'لا توجد قطع',
@@ -382,20 +384,16 @@ export function QuickOrderGrid() {
       return;
     }
 
-    // Create separate orders for each supplier
-    const ordersCreated: string[] = [];
-    
+    // Create separate draft orders for each supplier
     Object.entries(supplierGroups).forEach(([supplierId, group]) => {
-      const orderNumber = `ORD-${Date.now()}-${supplierId.slice(-3).toUpperCase()}`;
+      const orderNumber = `DRAFT-${Date.now()}-${supplierId.slice(-3).toUpperCase()}`;
       
-      // In a real app, this would save to database
-      // For now, we'll show a toast with order details
-      ordersCreated.push(`${group.supplierName}: ${orderNumber}`);
-      
-      console.log('Order created:', {
+      console.log('Draft order saved:', {
         orderNumber,
         supplierId,
         supplierName: group.supplierName,
+        customerNotes,
+        isDraft: true,
         items: group.lines.map(line => ({
           partId: line.part!.id,
           partNumber: line.part!.partNumber,
@@ -410,18 +408,64 @@ export function QuickOrderGrid() {
 
     const supplierCount = Object.keys(supplierGroups).length;
     toast({
-      title: 'تم حفظ الطلب بنجاح',
-      description: `تم إنشاء ${supplierCount} طلب${supplierCount > 1 ? 'ات' : ''} منفصلة للموردين`,
+      title: 'تم حفظ المسودة',
+      description: `تم حفظ ${supplierCount} طلب${supplierCount > 1 ? 'ات' : ''} كمسودة`,
     });
 
     // Clear all lines
     setLines(Array.from({ length: 10 }, () => createEmptyLine()));
-  }, [validLines, supplierGroups, toast]);
+    setCustomerNotes('');
+  }, [validLines, supplierGroups, customerNotes, toast]);
 
-  // Update ref when handleSaveOrder changes
+  // Send order directly (grouped by supplier)
+  const handleSendOrder = useCallback(() => {
+    if (validLines.length === 0) {
+      toast({
+        title: 'لا توجد قطع',
+        description: 'الرجاء إضافة قطع أولاً',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Create and send separate orders for each supplier
+    Object.entries(supplierGroups).forEach(([supplierId, group]) => {
+      const orderNumber = `ORD-${Date.now()}-${supplierId.slice(-3).toUpperCase()}`;
+      
+      console.log('Order sent:', {
+        orderNumber,
+        supplierId,
+        supplierName: group.supplierName,
+        customerNotes,
+        isDraft: false,
+        status: 'pending',
+        items: group.lines.map(line => ({
+          partId: line.part!.id,
+          partNumber: line.part!.partNumber,
+          name: line.part!.nameAr,
+          quantity: line.quantity,
+          unitPrice: line.selectedPrice,
+          total: line.selectedPrice * line.quantity,
+        })),
+        total: group.total,
+      });
+    });
+
+    const supplierCount = Object.keys(supplierGroups).length;
+    toast({
+      title: 'تم إرسال الطلب بنجاح',
+      description: `تم إرسال ${supplierCount} طلب${supplierCount > 1 ? 'ات' : ''} للموردين`,
+    });
+
+    // Clear all lines
+    setLines(Array.from({ length: 10 }, () => createEmptyLine()));
+    setCustomerNotes('');
+  }, [validLines, supplierGroups, customerNotes, toast]);
+
+  // Update ref when handleSendOrder changes
   useEffect(() => {
-    handleSaveOrderRef.current = handleSaveOrder;
-  }, [handleSaveOrder]);
+    handleSaveOrderRef.current = handleSendOrder;
+  }, [handleSendOrder]);
 
   return (
     <div className="space-y-4" dir="rtl" ref={containerRef}>
@@ -660,6 +704,24 @@ export function QuickOrderGrid() {
       {/* Summary by Supplier & Add to Cart */}
       {validLines.length > 0 && (
         <div className="space-y-3">
+          {/* Customer Notes */}
+          <div className="p-4 bg-muted/30 rounded-lg border border-border">
+            <div className="flex items-center gap-2 mb-2">
+              <FileText className="h-4 w-4 text-muted-foreground" />
+              <label htmlFor="customer-notes" className="text-sm font-medium">
+                ملاحظات العميل
+              </label>
+            </div>
+            <textarea
+              id="customer-notes"
+              value={customerNotes}
+              onChange={(e) => setCustomerNotes(e.target.value)}
+              placeholder="أضف أي ملاحظات أو تعليمات خاصة بالطلب..."
+              className="w-full min-h-[80px] p-3 text-sm rounded-md border border-input bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 resize-none"
+              dir="rtl"
+            />
+          </div>
+
           {/* Supplier breakdown */}
           <div className="p-4 bg-secondary/30 rounded-lg border border-border space-y-2">
             <div className="text-sm font-medium text-muted-foreground mb-2">تفصيل حسب المورد:</div>
@@ -675,7 +737,7 @@ export function QuickOrderGrid() {
             ))}
           </div>
 
-          {/* Total & Save Order */}
+          {/* Total & Order Actions */}
           <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg border border-primary/20">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 text-muted-foreground">
@@ -689,10 +751,25 @@ export function QuickOrderGrid() {
               </div>
             </div>
             
-            <Button size="lg" onClick={handleSaveOrder} className="gap-2">
-              <Save className="h-5 w-5" />
-              حفظ الطلب
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button 
+                size="lg" 
+                variant="outline" 
+                onClick={handleSaveAsDraft} 
+                className="gap-2"
+              >
+                <Save className="h-5 w-5" />
+                حفظ كمسودة
+              </Button>
+              <Button 
+                size="lg" 
+                onClick={handleSendOrder} 
+                className="gap-2"
+              >
+                <Send className="h-5 w-5" />
+                إرسال الطلب
+              </Button>
+            </div>
           </div>
         </div>
       )}
