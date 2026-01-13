@@ -28,6 +28,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 const menuItems = [
   { title: 'لوحة التحكم', url: '/admin', icon: LayoutDashboard },
@@ -49,80 +50,86 @@ export function AdminSidebar() {
     <Sidebar 
       side="right"
       collapsible="icon"
-      className="border-l border-sidebar-border/50 bg-gradient-to-b from-sidebar-background via-sidebar-background to-sidebar-background/95"
+      className="border-l border-sidebar-border/30 bg-sidebar-background"
     >
       {/* Header with Logo */}
       <div className={cn(
-        "relative flex items-center gap-3 p-5",
-        isCollapsed ? "justify-center" : "justify-between"
+        "flex items-center p-4 border-b border-sidebar-border/30",
+        isCollapsed ? "justify-center py-4" : "justify-between"
       )}>
-        {/* Decorative gradient orb */}
-        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-primary/20 via-primary/5 to-transparent rounded-full blur-2xl pointer-events-none" />
-        
         {!isCollapsed && (
-          <div className="flex items-center gap-3 relative z-10">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-lg shadow-primary/25">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
               <Sparkles className="h-5 w-5 text-primary-foreground" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-sidebar-foreground">لوحة الإدارة</h2>
-              <p className="text-[10px] text-sidebar-foreground/50 font-medium">نظام إدارة المخزون</p>
+              <h2 className="text-base font-bold text-sidebar-foreground">لوحة الإدارة</h2>
+              <p className="text-[10px] text-sidebar-foreground/50">نظام إدارة المخزون</p>
             </div>
           </div>
         )}
         
         {isCollapsed && (
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-lg shadow-primary/25">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
             <Sparkles className="h-5 w-5 text-primary-foreground" />
           </div>
         )}
         
-        <SidebarTrigger className={cn(
-          "h-8 w-8 rounded-lg bg-sidebar-accent/50 hover:bg-sidebar-accent transition-all duration-200 relative z-10",
-          isCollapsed && "absolute -left-3 top-1/2 -translate-y-1/2 shadow-lg"
-        )}>
-          {isCollapsed ? (
-            <PanelRightOpen className="h-4 w-4 text-sidebar-foreground/70" />
-          ) : (
-            <PanelRightClose className="h-4 w-4 text-sidebar-foreground/70" />
-          )}
-        </SidebarTrigger>
+        {!isCollapsed && (
+          <SidebarTrigger className="h-8 w-8 rounded-lg hover:bg-sidebar-accent transition-colors">
+            <PanelRightClose className="h-4 w-4 text-sidebar-foreground/60" />
+          </SidebarTrigger>
+        )}
       </div>
 
-      {/* Divider with gradient */}
-      <div className="mx-4 h-px bg-gradient-to-l from-transparent via-sidebar-border to-transparent" />
-
-      <SidebarContent className="px-3 py-5">
+      <SidebarContent className={cn("py-4", isCollapsed ? "px-2" : "px-3")}>
         <SidebarGroup>
           {!isCollapsed && (
-            <SidebarGroupLabel className="text-[11px] font-semibold text-sidebar-foreground/40 uppercase tracking-wider px-3 mb-3">
+            <SidebarGroupLabel className="text-[10px] font-semibold text-sidebar-foreground/40 uppercase tracking-wider px-3 mb-2">
               القائمة الرئيسية
             </SidebarGroupLabel>
           )}
           <SidebarGroupContent>
-            <SidebarMenu className="space-y-1.5">
+            <SidebarMenu className={cn("space-y-1", isCollapsed && "space-y-2")}>
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild tooltip={isCollapsed ? item.title : undefined}>
-                    <NavLink 
-                      to={item.url} 
-                      end={item.url === '/admin'}
-                      className={cn(
-                        "group relative flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-300",
-                        "text-sidebar-foreground/60 hover:text-sidebar-foreground",
-                        "hover:bg-sidebar-accent/60",
-                        isCollapsed && "justify-center px-3"
-                      )}
-                      activeClassName="!bg-primary !text-primary-foreground hover:!bg-primary hover:!text-primary-foreground font-medium shadow-lg shadow-primary/30"
-                    >
-                      <div className="flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-300 bg-sidebar-accent/40 group-hover:bg-sidebar-accent/60">
-                        <item.icon className="h-[18px] w-[18px] shrink-0" />
-                      </div>
-                      {!isCollapsed && (
-                        <span className="text-sm font-medium">{item.title}</span>
-                      )}
-                    </NavLink>
-                  </SidebarMenuButton>
+                  {isCollapsed ? (
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger asChild>
+                        <NavLink 
+                          to={item.url} 
+                          end={item.url === '/admin'}
+                          className={cn(
+                            "flex items-center justify-center p-2.5 rounded-lg transition-all duration-200",
+                            "text-sidebar-foreground/60 hover:text-sidebar-foreground",
+                            "hover:bg-sidebar-accent"
+                          )}
+                          activeClassName="!bg-primary !text-primary-foreground"
+                        >
+                          <item.icon className="h-5 w-5" />
+                        </NavLink>
+                      </TooltipTrigger>
+                      <TooltipContent side="left" className="font-medium">
+                        {item.title}
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <SidebarMenuButton asChild>
+                      <NavLink 
+                        to={item.url} 
+                        end={item.url === '/admin'}
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200",
+                          "text-sidebar-foreground/70 hover:text-sidebar-foreground",
+                          "hover:bg-sidebar-accent"
+                        )}
+                        activeClassName="!bg-primary !text-primary-foreground font-medium"
+                      >
+                        <item.icon className="h-5 w-5 shrink-0" />
+                        <span className="text-sm">{item.title}</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  )}
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
@@ -130,40 +137,41 @@ export function AdminSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      {/* Footer - Back to store */}
-      <div className="mt-auto">
-        <div className="mx-4 h-px bg-gradient-to-l from-transparent via-sidebar-border to-transparent" />
-        <div className="p-4">
-          <NavLink 
-            to="/" 
-            className={cn(
-              "group flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-300",
-              "bg-sidebar-accent/30 hover:bg-sidebar-accent/60",
-              "text-sidebar-foreground/60 hover:text-sidebar-foreground",
-              isCollapsed && "justify-center"
-            )}
-          >
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sidebar-accent/50 group-hover:bg-sidebar-accent transition-all duration-300">
-              <Store className="h-[18px] w-[18px] shrink-0" />
-            </div>
-            {!isCollapsed && (
-              <>
-                <span className="text-sm font-medium">العودة للمتجر</span>
-                <ChevronLeft className="h-4 w-4 mr-auto opacity-50 group-hover:opacity-100 group-hover:-translate-x-1 transition-all duration-300" />
-              </>
-            )}
-          </NavLink>
+      {/* Footer */}
+      <div className="mt-auto border-t border-sidebar-border/30">
+        <div className={cn("p-3", isCollapsed && "p-2")}>
+          {isCollapsed ? (
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <NavLink 
+                  to="/" 
+                  className="flex items-center justify-center p-2.5 rounded-lg text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+                >
+                  <Store className="h-5 w-5" />
+                </NavLink>
+              </TooltipTrigger>
+              <TooltipContent side="left" className="font-medium">
+                العودة للمتجر
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <NavLink 
+              to="/" 
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+            >
+              <Store className="h-5 w-5 shrink-0" />
+              <span className="text-sm">العودة للمتجر</span>
+              <ChevronLeft className="h-4 w-4 mr-auto opacity-50" />
+            </NavLink>
+          )}
         </div>
         
-        {/* Bottom decorative element */}
-        {!isCollapsed && (
-          <div className="px-4 pb-4">
-            <div className="rounded-xl bg-gradient-to-l from-primary/10 via-primary/5 to-transparent p-4 border border-sidebar-border/30">
-              <div className="flex items-center gap-2 text-sidebar-foreground/50">
-                <div className="h-2 w-2 rounded-full bg-success animate-pulse" />
-                <span className="text-xs font-medium">النظام يعمل بشكل طبيعي</span>
-              </div>
-            </div>
+        {/* Expand trigger when collapsed */}
+        {isCollapsed && (
+          <div className="p-2 border-t border-sidebar-border/30">
+            <SidebarTrigger className="w-full flex items-center justify-center p-2.5 rounded-lg hover:bg-sidebar-accent transition-colors">
+              <PanelRightOpen className="h-5 w-5 text-sidebar-foreground/60" />
+            </SidebarTrigger>
           </div>
         )}
       </div>
