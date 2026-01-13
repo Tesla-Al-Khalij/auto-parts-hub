@@ -107,7 +107,7 @@ export function QuickOrderGrid() {
   // Load reorder items when set
   useEffect(() => {
     if (reorderItems) {
-      // Convert order items to lines
+      // Convert order items to lines - clear quantity so customer can enter their own
       const reorderLines: OrderLine[] = reorderItems.items.map(item => {
         // Find the part in our parts list
         const part = mockParts.find(p => p.partNumber === item.partNumber) || null;
@@ -117,7 +117,7 @@ export function QuickOrderGrid() {
           id: crypto.randomUUID(),
           partNumber: item.partNumber,
           part,
-          quantity: item.quantity,
+          quantity: 0, // Clear quantity for customer to enter
           suggestions: [],
           showSuggestions: false,
           highlightedIndex: -1,
