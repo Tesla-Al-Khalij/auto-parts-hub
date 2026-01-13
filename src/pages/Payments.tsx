@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,6 +34,8 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { PaymentCollectionDialog } from '@/components/payments/PaymentCollectionDialog';
+import { useTableControls } from '@/hooks/useTableControls';
+import { DataTablePagination, SortableHeader } from '@/components/ui/data-table-controls';
 
 // Payment status types
 type PaymentStatus = 'pending' | 'paid' | 'expired' | 'cancelled';
@@ -103,6 +105,56 @@ const mockPayments: PaymentTransaction[] = [
     status: 'pending',
     createdAt: '2024-01-12T16:45:00'
   },
+  {
+    id: 'PAY-005',
+    customerPhone: '0512345678',
+    customerName: 'عبدالله السالم',
+    amount: 4500,
+    fee: 225,
+    netAmount: 4275,
+    provider: 'tamara',
+    feeHandling: 'merchant_pays',
+    status: 'paid',
+    createdAt: '2024-01-09T08:15:00',
+    paidAt: '2024-01-09T09:30:00'
+  },
+  {
+    id: 'PAY-006',
+    customerPhone: '0567891234',
+    customerName: 'محمد الدوسري',
+    amount: 1200,
+    fee: 48,
+    netAmount: 1200,
+    provider: 'mispay',
+    feeHandling: 'customer_pays',
+    status: 'cancelled',
+    createdAt: '2024-01-07T12:00:00'
+  },
+  {
+    id: 'PAY-007',
+    customerPhone: '0598765432',
+    customerName: 'ناصر العنزي',
+    amount: 2800,
+    fee: 168,
+    netAmount: 2800,
+    provider: 'tabby',
+    feeHandling: 'customer_pays',
+    status: 'paid',
+    createdAt: '2024-01-06T15:45:00',
+    paidAt: '2024-01-06T16:20:00'
+  },
+  {
+    id: 'PAY-008',
+    customerPhone: '0534567890',
+    customerName: 'يوسف المالكي',
+    amount: 950,
+    fee: 47.5,
+    netAmount: 902.5,
+    provider: 'tamara',
+    feeHandling: 'merchant_pays',
+    status: 'pending',
+    createdAt: '2024-01-13T09:00:00'
+  },
 ];
 
 const providerConfig = {
@@ -120,20 +172,40 @@ const statusConfig: Record<PaymentStatus, { label: string; icon: React.ReactNode
 
 const Payments: React.FC = () => {
   const [payments] = useState<PaymentTransaction[]>(mockPayments);
-  const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [providerFilter, setProviderFilter] = useState<string>('all');
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  // Filter payments
-  const filteredPayments = payments.filter(payment => {
-    const matchesSearch = 
-      payment.customerPhone.includes(searchQuery) ||
-      payment.customerName.includes(searchQuery) ||
-      payment.id.includes(searchQuery);
-    const matchesStatus = statusFilter === 'all' || payment.status === statusFilter;
-    const matchesProvider = providerFilter === 'all' || payment.provider === providerFilter;
-    return matchesSearch && matchesStatus && matchesProvider;
+  // Pre-filter by status and provider
+  const preFilteredPayments = useMemo(() => {
+    return payments.filter(payment => {
+      const matchesStatus = statusFilter === 'all' || payment.status === statusFilter;
+      const matchesProvider = providerFilter === 'all' || payment.provider === providerFilter;
+      return matchesStatus && matchesProvider;
+    });
+  }, [payments, statusFilter, providerFilter]);
+
+  // Use table controls for search, sort, pagination
+  const {
+    paginatedData,
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    setPageSize,
+    totalPages,
+    totalItems,
+    startIndex,
+    endIndex,
+    sortConfig,
+    handleSort,
+    searchQuery,
+    setSearchQuery,
+  } = useTableControls<PaymentTransaction>({
+    data: preFilteredPayments,
+    initialPageSize: 10,
+    initialSortKey: 'createdAt',
+    initialSortDirection: 'desc',
+    searchableFields: ['id', 'customerName', 'customerPhone'],
   });
 
   // Calculate stats
@@ -282,7 +354,7 @@ const Payments: React.FC = () => {
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center justify-between">
               <span>سجل العمليات</span>
-              <Badge variant="secondary">{filteredPayments.length} عملية</Badge>
+              <Badge variant="secondary">{totalItems} عملية</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -290,27 +362,73 @@ const Payments: React.FC = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-right">رقم العملية</TableHead>
-                    <TableHead className="text-right">العميل</TableHead>
-                    <TableHead className="text-right">المبلغ</TableHead>
+                    <TableHead className="text-right w-12">#</TableHead>
+                    <TableHead className="text-right">
+                      <SortableHeader
+                        label="رقم العملية"
+                        sortKey="id"
+                        sortConfig={sortConfig}
+                        onSort={handleSort}
+                      />
+                    </TableHead>
+                    <TableHead className="text-right">
+                      <SortableHeader
+                        label="العميل"
+                        sortKey="customerName"
+                        sortConfig={sortConfig}
+                        onSort={handleSort}
+                      />
+                    </TableHead>
+                    <TableHead className="text-right">
+                      <SortableHeader
+                        label="المبلغ"
+                        sortKey="amount"
+                        sortConfig={sortConfig}
+                        onSort={handleSort}
+                      />
+                    </TableHead>
                     <TableHead className="text-right">الرسوم</TableHead>
-                    <TableHead className="text-right">الصافي</TableHead>
+                    <TableHead className="text-right">
+                      <SortableHeader
+                        label="الصافي"
+                        sortKey="netAmount"
+                        sortConfig={sortConfig}
+                        onSort={handleSort}
+                      />
+                    </TableHead>
                     <TableHead className="text-right">البوابة</TableHead>
-                    <TableHead className="text-right">الحالة</TableHead>
-                    <TableHead className="text-right">التاريخ</TableHead>
+                    <TableHead className="text-right">
+                      <SortableHeader
+                        label="الحالة"
+                        sortKey="status"
+                        sortConfig={sortConfig}
+                        onSort={handleSort}
+                      />
+                    </TableHead>
+                    <TableHead className="text-right">
+                      <SortableHeader
+                        label="التاريخ"
+                        sortKey="createdAt"
+                        sortConfig={sortConfig}
+                        onSort={handleSort}
+                      />
+                    </TableHead>
                     <TableHead className="text-right">الإجراءات</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredPayments.length === 0 ? (
+                  {paginatedData.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                         لا توجد عمليات مطابقة
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredPayments.map((payment) => (
+                    paginatedData.map((payment, index) => (
                       <TableRow key={payment.id}>
+                        <TableCell className="font-mono text-sm text-muted-foreground">
+                          {startIndex + index + 1}
+                        </TableCell>
                         <TableCell className="font-mono text-sm">{payment.id}</TableCell>
                         <TableCell>
                           <div>
@@ -359,6 +477,18 @@ const Payments: React.FC = () => {
                 </TableBody>
               </Table>
             </div>
+            
+            {/* Pagination */}
+            <DataTablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              startIndex={startIndex}
+              endIndex={endIndex}
+              onPageChange={setCurrentPage}
+              pageSize={pageSize}
+              onPageSizeChange={setPageSize}
+            />
           </CardContent>
         </Card>
 
