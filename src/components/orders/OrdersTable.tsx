@@ -1,9 +1,11 @@
-import { Link } from 'react-router-dom';
-import { Eye, FileEdit, Send, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Eye, FileEdit, Send, ArrowUpDown, ArrowUp, ArrowDown, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Order } from '@/types';
 import { OrderStatusBadge } from './OrderStatusBadge';
+import { useDraftOrder } from '@/contexts/DraftOrderContext';
+import { useToast } from '@/hooks/use-toast';
 import {
   Table,
   TableBody,
@@ -26,6 +28,19 @@ interface OrdersTableProps {
 }
 
 export function OrdersTable({ orders, startIndex = 0, sortField, sortDirection, onSort, onEditDraft }: OrdersTableProps) {
+  const { setReorderItems } = useDraftOrder();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const handleReorder = (order: Order) => {
+    setReorderItems(order);
+    navigate('/');
+    toast({
+      title: 'إعادة الطلب',
+      description: `تم نسخ ${order.items.length} قطعة إلى طلب جديد`,
+    });
+  };
+
   const SortIcon = ({ field }: { field: SortField }) => {
     if (sortField !== field) return <ArrowUpDown className="h-4 w-4 mr-1 opacity-50" />;
     return sortDirection === 'asc' 
@@ -125,12 +140,23 @@ export function OrdersTable({ orders, startIndex = 0, sortField, sortDirection, 
                         </Button>
                       </>
                     ) : (
-                      <Link to={`/orders/${order.id}`}>
-                        <Button variant="outline" size="sm" className="h-9 gap-1">
-                          <Eye className="h-4 w-4" />
-                          عرض
+                      <>
+                        <Link to={`/orders/${order.id}`}>
+                          <Button variant="outline" size="sm" className="h-9 gap-1">
+                            <Eye className="h-4 w-4" />
+                            عرض
+                          </Button>
+                        </Link>
+                        <Button 
+                          variant="secondary" 
+                          size="sm" 
+                          className="h-9 gap-1"
+                          onClick={() => handleReorder(order)}
+                        >
+                          <RotateCcw className="h-4 w-4" />
+                          إعادة
                         </Button>
-                      </Link>
+                      </>
                     )}
                   </div>
                 </TableCell>

@@ -51,7 +51,7 @@ const getSupplierName = (supplierId: string) => {
 
 export function QuickOrderGrid() {
   const { parts } = useCachedParts();
-  const { draftOrder, clearDraftOrder } = useDraftOrder();
+  const { draftOrder, clearDraftOrder, reorderItems, clearReorderItems } = useDraftOrder();
   const [lines, setLines] = useState<OrderLine[]>(() => 
     Array.from({ length: 10 }, () => createEmptyLine())
   );
@@ -103,6 +103,42 @@ export function QuickOrderGrid() {
       clearDraftOrder();
     }
   }, [draftOrder, clearDraftOrder, toast]);
+
+  // Load reorder items when set
+  useEffect(() => {
+    if (reorderItems) {
+      // Convert order items to lines
+      const reorderLines: OrderLine[] = reorderItems.items.map(item => {
+        // Find the part in our parts list
+        const part = mockParts.find(p => p.partNumber === item.partNumber) || null;
+        const firstSupplier = part?.supplierPrices?.[0];
+        
+        return {
+          id: crypto.randomUUID(),
+          partNumber: item.partNumber,
+          part,
+          quantity: item.quantity,
+          suggestions: [],
+          showSuggestions: false,
+          highlightedIndex: -1,
+          selectedSupplierId: firstSupplier?.supplierId || null,
+          selectedPrice: item.unitPrice || firstSupplier?.price || 0,
+        };
+      });
+
+      // Add empty lines to fill up to 10
+      while (reorderLines.length < 10) {
+        reorderLines.push(createEmptyLine());
+      }
+
+      setLines(reorderLines);
+      setCustomerNotes(''); // New order, no notes
+      setEditingDraftId(null); // Not editing, creating new
+
+      // Clear the reorder from context so it doesn't reload
+      clearReorderItems();
+    }
+  }, [reorderItems, clearReorderItems]);
 
   const handleCancelEdit = () => {
     setEditingDraftId(null);

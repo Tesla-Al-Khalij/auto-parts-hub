@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronLeft, FileEdit, Send, Save, FileText } from 'lucide-react';
+import { ChevronLeft, FileEdit, Send, Save, FileText, RotateCcw } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,12 +18,21 @@ export function OrderCard({ order }: OrderCardProps) {
   const [notes, setNotes] = useState(order.notes || '');
   const [showNotes, setShowNotes] = useState(false);
   const { toast } = useToast();
-  const { setDraftOrder } = useDraftOrder();
+  const { setDraftOrder, setReorderItems } = useDraftOrder();
   const navigate = useNavigate();
 
   const handleEditDraft = () => {
     setDraftOrder(order);
     navigate('/');
+  };
+
+  const handleReorder = () => {
+    setReorderItems(order);
+    navigate('/');
+    toast({
+      title: 'إعادة الطلب',
+      description: `تم نسخ ${order.items.length} قطعة إلى طلب جديد`,
+    });
   };
 
   const formattedDate = new Date(order.date).toLocaleDateString('en-US', {
@@ -144,12 +153,22 @@ export function OrderCard({ order }: OrderCardProps) {
               </Button>
             </>
           ) : (
-            <Link to={`/orders/${order.id}`} className="w-full">
-              <Button variant="outline" className="w-full h-12 gap-2">
-                عرض التفاصيل والتتبع
-                <ChevronLeft className="h-4 w-4" />
+            <div className="flex gap-2 w-full">
+              <Link to={`/orders/${order.id}`} className="flex-1">
+                <Button variant="outline" className="w-full h-12 gap-2">
+                  عرض التفاصيل
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              </Link>
+              <Button 
+                variant="secondary" 
+                className="h-12 gap-2"
+                onClick={handleReorder}
+              >
+                <RotateCcw className="h-4 w-4" />
+                إعادة الطلب
               </Button>
-            </Link>
+            </div>
           )}
         </div>
       </CardContent>
