@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search, Plus, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { StockBadge } from '@/components/ui/stock-badge';
 
 interface SelectedPartItem {
   part: Part;
@@ -215,17 +216,12 @@ export const MultiPartSelector: React.FC<MultiPartSelectorProps> = ({
                       </p>
                     </div>
 
-                    {/* Price & Stock */}
+                    {/* Price & Stock Indicator */}
                     <div className="text-left flex-shrink-0 ml-2">
                       <div className="font-bold text-primary">
                         {part.price.toFixed(2)} <span className="text-xs font-normal">ر.س</span>
                       </div>
-                      <div className={cn(
-                        "text-xs font-medium",
-                        part.stock > 0 ? "text-green-600" : "text-destructive"
-                      )}>
-                        {part.stock > 0 ? `متوفر: ${part.stock}` : 'غير متوفر'}
-                      </div>
+                      <StockBadge stock={part.stock} />
                     </div>
                   </div>
 

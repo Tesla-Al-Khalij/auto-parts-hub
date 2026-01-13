@@ -11,6 +11,8 @@ import { Badge } from '@/components/ui/badge';
 import { ExcelImportDialog } from './ExcelImportDialog';
 import { useDraftOrder } from '@/contexts/DraftOrderContext';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { StockBadge, QuantityValidationBadge } from '@/components/ui/stock-badge';
+import { validateQuantity } from '@/utils/stockUtils';
 import {
   Select,
   SelectContent,
@@ -870,13 +872,13 @@ export function QuickOrderGrid() {
 
 
       {/* Grid Header */}
-      <div className="grid grid-cols-[40px_1fr_150px_150px_80px_100px_80px_60px] gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-t-lg font-medium text-sm">
+      <div className="grid grid-cols-[40px_1fr_150px_150px_100px_90px_80px_60px] gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-t-lg font-medium text-sm">
         <div className="text-center">#</div>
         <div>رقم القطعة</div>
         <div>اسم القطعة</div>
         <div>المورد</div>
         <div className="text-center">الكمية</div>
-        <div className="text-center">السعر</div>
+        <div className="text-center">التوفر</div>
         <div className="text-center">المجموع</div>
         <div className="text-center">إجراءات</div>
       </div>
@@ -887,7 +889,7 @@ export function QuickOrderGrid() {
           <div
             key={line.id}
             className={cn(
-              "grid grid-cols-[40px_1fr_150px_150px_80px_100px_80px_60px] gap-2 px-3 py-2 items-center transition-colors",
+              "grid grid-cols-[40px_1fr_150px_150px_100px_90px_80px_60px] gap-2 px-3 py-2 items-center transition-colors",
               index % 2 === 0 ? "bg-background" : "bg-muted/30",
               line.part && "bg-primary/5",
               focusedIndex === index && "ring-1 ring-primary/50 bg-primary/5"
@@ -986,26 +988,38 @@ export function QuickOrderGrid() {
               )}
             </div>
 
-            {/* Quantity - editable input */}
-            <Input
-              id={`qty-${index}`}
-              type="number"
-              min="0"
-              value={line.quantity || ''}
-              onChange={e => handleQuantityChange(index, e.target.value)}
-              onKeyDown={e => handleKeyDown(e, index, 'quantity')}
-              onFocus={(e) => {
-                setFocusedIndex(index);
-                e.target.select();
-              }}
-              placeholder="0"
-              className="h-9 text-sm text-center"
-            />
+            {/* Quantity with validation */}
+            <div className="flex flex-col gap-1">
+              <Input
+                id={`qty-${index}`}
+                type="number"
+                min="0"
+                value={line.quantity || ''}
+                onChange={e => handleQuantityChange(index, e.target.value)}
+                onKeyDown={e => handleKeyDown(e, index, 'quantity')}
+                onFocus={(e) => {
+                  setFocusedIndex(index);
+                  e.target.select();
+                }}
+                placeholder="0"
+                className={cn(
+                  "h-9 text-sm text-center",
+                  line.part && line.quantity > 0 && !validateQuantity(line.quantity, line.part.stock).isValid && "border-destructive"
+                )}
+              />
+              {/* Quantity validation indicator */}
+              {line.part && line.quantity > 0 && (
+                <QuantityValidationBadge 
+                  validation={validateQuantity(line.quantity, line.part.stock)} 
+                  className="text-[10px] px-1.5 py-0"
+                />
+              )}
+            </div>
 
-            {/* Price */}
+            {/* Stock Indicator */}
             <div className="text-center text-sm">
               {line.part ? (
-                <span>{line.selectedPrice.toFixed(2)} ر.س</span>
+                <StockBadge stock={line.part.stock} />
               ) : (
                 <span className="text-muted-foreground">-</span>
               )}
