@@ -52,6 +52,7 @@ export function OrdersTable({ orders, startIndex = 0, sortField, sortDirection, 
             <TableHead className="text-right">
               <SortableHeader field="orderNumber">رقم الطلب</SortableHeader>
             </TableHead>
+            <TableHead className="text-right font-bold">المورد</TableHead>
             <TableHead className="text-right">
               <SortableHeader field="date">التاريخ</SortableHeader>
             </TableHead>
@@ -87,6 +88,9 @@ export function OrdersTable({ orders, startIndex = 0, sortField, sortDirection, 
                       </Badge>
                     )}
                   </div>
+                </TableCell>
+                <TableCell>
+                  <span className="font-medium text-foreground">تسلا الخليج</span>
                 </TableCell>
                 <TableCell className="text-muted-foreground">{formattedDate}</TableCell>
                 <TableCell>
