@@ -1,14 +1,14 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
-import { Plus, Trash2, Package, Keyboard, Copy, Save, Send, FileText, Upload, FileSpreadsheet } from 'lucide-react';
+import { Plus, Trash2, Package, Keyboard, Copy, Save, Send, FileText, FileSpreadsheet } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { mockSuppliers } from '@/data/mockData';
 import { useCachedParts } from '@/hooks/useCachedParts';
-import { Part, SupplierPrice } from '@/types';
-// Cart context removed - orders saved directly
+import { Part } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { ExcelImportDialog } from './ExcelImportDialog';
 import {
   Select,
   SelectContent,
@@ -54,7 +54,7 @@ export function QuickOrderGrid() {
   );
   const [focusedIndex, setFocusedIndex] = useState<number>(0);
   const [customerNotes, setCustomerNotes] = useState<string>('');
-  // Cart context removed - orders saved directly
+  const [excelDialogOpen, setExcelDialogOpen] = useState(false);
   const { toast } = useToast();
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -119,6 +119,40 @@ export function QuickOrderGrid() {
     inputRefs.current[0]?.focus();
     toast({
       title: 'تم مسح الكل',
+    });
+  }, [toast]);
+
+  // Handle Excel import - add items from dialog
+  const handleExcelImport = useCallback((items: { part: Part; quantity: number }[]) => {
+    const importedLines: OrderLine[] = items.map(item => {
+      const firstSupplier = item.part.supplierPrices?.[0];
+      return {
+        id: crypto.randomUUID(),
+        partNumber: item.part.partNumber,
+        part: item.part,
+        quantity: item.quantity,
+        suggestions: [],
+        showSuggestions: false,
+        highlightedIndex: -1,
+        selectedSupplierId: firstSupplier?.supplierId || null,
+        selectedPrice: firstSupplier?.price || item.part.price,
+      };
+    });
+
+    setLines(prev => {
+      // Replace empty lines or add to end
+      const nonEmptyLines = prev.filter(l => l.partNumber || l.part);
+      const newLines = [...nonEmptyLines, ...importedLines];
+      // Ensure minimum rows
+      while (newLines.length < 10) {
+        newLines.push(createEmptyLine());
+      }
+      return newLines;
+    });
+
+    toast({
+      title: 'تم استيراد الملف',
+      description: `تم إضافة ${items.length} قطعة للطلب`,
     });
   }, [toast]);
 
@@ -467,107 +501,27 @@ export function QuickOrderGrid() {
     handleSaveOrderRef.current = handleSendOrder;
   }, [handleSendOrder]);
 
-  // Handle Excel file import
-  const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target?.result as string;
-      const importedLines = text
-        .split(/[\n\r]+/)
-        .map(line => line.trim())
-        .filter(line => line.length > 0)
-        .map(line => {
-          // Try to parse as: partNumber, quantity (comma or tab separated)
-          const parts = line.split(/[,\t;]+/).map(p => p.trim());
-          const partNumber = parts[0] || '';
-          const quantity = parseInt(parts[1]) || 1;
-          
-          // Find matching part
-          const matchedPart = partNumber.length >= 2 
-            ? (partsData.find(p => p.partNumber.toLowerCase() === partNumber.toLowerCase()) || null)
-            : null;
-          
-          // Get supplier info if part found
-          let selectedSupplierId: string | null = null;
-          let selectedPrice = 0;
-          if (matchedPart) {
-            const firstSupplier = matchedPart.supplierPrices?.[0];
-            if (firstSupplier) {
-              selectedSupplierId = firstSupplier.supplierId;
-              selectedPrice = firstSupplier.price;
-            } else {
-              selectedPrice = matchedPart.price;
-            }
-          }
-          
-          return {
-            id: crypto.randomUUID(),
-            partNumber,
-            part: matchedPart,
-            quantity,
-            suggestions: [],
-            showSuggestions: false,
-            highlightedIndex: -1,
-            selectedSupplierId,
-            selectedPrice,
-          };
-        });
-      
-      if (importedLines.length > 0) {
-        setLines(prev => {
-          // Add imported lines, replacing empty lines
-          const emptyCount = prev.filter(l => !l.partNumber && !l.part).length;
-          if (emptyCount >= importedLines.length) {
-            // Replace empty lines
-            const newLines = [...prev];
-            let importIdx = 0;
-            for (let i = 0; i < newLines.length && importIdx < importedLines.length; i++) {
-              if (!newLines[i].partNumber && !newLines[i].part) {
-                newLines[i] = importedLines[importIdx];
-                importIdx++;
-              }
-            }
-            return newLines;
-          } else {
-            // Add to end
-            return [...prev.filter(l => l.partNumber || l.part), ...importedLines];
-          }
-        });
-        
-        const matchedCount = importedLines.filter(l => l.part).length;
-        toast({
-          title: 'تم استيراد الملف',
-          description: `تم استيراد ${importedLines.length} سطر، ${matchedCount} قطعة مطابقة`,
-        });
-      }
-    };
-    reader.readAsText(file);
-    
-    // Reset input
-    event.target.value = '';
-  }, [parts, toast]);
-
-  // Alias for parts data
-  const partsData = parts;
-
   return (
     <div className="space-y-4" dir="rtl" ref={containerRef}>
+      {/* Excel Import Dialog */}
+      <ExcelImportDialog
+        open={excelDialogOpen}
+        onOpenChange={setExcelDialogOpen}
+        onImport={handleExcelImport}
+        parts={parts}
+      />
+
       {/* Excel Import & Keyboard shortcuts */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         {/* Excel import */}
-        <label className="flex items-center gap-2 px-4 py-2 bg-primary/10 hover:bg-primary/20 rounded-lg cursor-pointer transition-colors border border-primary/20">
-          <FileSpreadsheet className="h-5 w-5 text-primary" />
-          <span className="font-medium text-primary">رفع ملف Excel</span>
-          <input
-            type="file"
-            accept=".csv,.txt,.xlsx,.xls"
-            className="hidden"
-            onChange={handleFileUpload}
-          />
-        </label>
+        <Button
+          variant="outline"
+          onClick={() => setExcelDialogOpen(true)}
+          className="gap-2 border-primary/20 bg-primary/10 hover:bg-primary/20 text-primary"
+        >
+          <FileSpreadsheet className="h-5 w-5" />
+          رفع ملف Excel
+        </Button>
 
         {/* Keyboard shortcuts hint */}
         <div className="flex items-center gap-3 text-xs">
