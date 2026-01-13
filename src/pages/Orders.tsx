@@ -11,7 +11,7 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { OrderCard } from '@/components/orders/OrderCard';
 import { OrdersTable } from '@/components/orders/OrdersTable';
 import { DataTablePagination } from '@/components/ui/data-table-controls';
-import { mockOrders } from '@/data/mockData';
+import { mockOrders, mockSuppliers } from '@/data/mockData';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
@@ -28,6 +28,7 @@ export default function Orders() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [supplierFilter, setSupplierFilter] = useState('all');
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
   const [dateTo, setDateTo] = useState<Date | undefined>();
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('table');
@@ -46,12 +47,13 @@ export default function Orders() {
   const clearFilters = () => {
     setSearchQuery('');
     setStatusFilter('all');
+    setSupplierFilter('all');
     setDateFrom(undefined);
     setDateTo(undefined);
     setCurrentPage(1);
   };
 
-  const hasActiveFilters = searchQuery || statusFilter !== 'all' || dateFrom || dateTo;
+  const hasActiveFilters = searchQuery || statusFilter !== 'all' || supplierFilter !== 'all' || dateFrom || dateTo;
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -82,12 +84,15 @@ export default function Orders() {
       // Status filter
       const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
 
+      // Supplier filter
+      const matchesSupplier = supplierFilter === 'all' || order.supplierId === supplierFilter;
+
       // Date filter
       const orderDate = new Date(order.date);
       const matchesDateFrom = !dateFrom || orderDate >= dateFrom;
       const matchesDateTo = !dateTo || orderDate <= dateTo;
 
-      return matchesSearch && matchesTab && matchesStatus && matchesDateFrom && matchesDateTo;
+      return matchesSearch && matchesTab && matchesStatus && matchesSupplier && matchesDateFrom && matchesDateTo;
     });
 
     // Sort
@@ -109,7 +114,7 @@ export default function Orders() {
       }
       return sortDirection === 'asc' ? comparison : -comparison;
     });
-  }, [searchQuery, activeTab, statusFilter, dateFrom, dateTo, sortField, sortDirection]);
+  }, [searchQuery, activeTab, statusFilter, supplierFilter, dateFrom, dateTo, sortField, sortDirection]);
 
   // Paginated orders
   const totalItems = filteredOrders.length;
@@ -126,6 +131,11 @@ export default function Orders() {
 
   const handleStatusChange = (value: string) => {
     setStatusFilter(value);
+    setCurrentPage(1);
+  };
+
+  const handleSupplierChange = (value: string) => {
+    setSupplierFilter(value);
     setCurrentPage(1);
   };
 
@@ -203,6 +213,21 @@ export default function Orders() {
                   <SelectItem value="shipped">تم الشحن</SelectItem>
                   <SelectItem value="delivered">تم التسليم</SelectItem>
                   <SelectItem value="cancelled">ملغي</SelectItem>
+              </SelectContent>
+              </Select>
+
+              {/* Supplier filter */}
+              <Select value={supplierFilter} onValueChange={handleSupplierChange}>
+                <SelectTrigger className="w-[180px] h-12">
+                  <SelectValue placeholder="المورد" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">جميع الموردين</SelectItem>
+                  {mockSuppliers.map(supplier => (
+                    <SelectItem key={supplier.id} value={supplier.id}>
+                      {supplier.nameAr || supplier.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
 
