@@ -2,9 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Search, 
-  ShoppingCart, 
   Menu, 
-  X, 
   Package, 
   FileText, 
   User,
@@ -16,9 +14,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
-import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 
@@ -38,7 +34,6 @@ const formatBalance = (amount: number, show: boolean) => {
 export function Header() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { itemCount, total } = useCart();
   const { isAuthenticated, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showBalance, setShowBalance] = useState(true);
@@ -132,18 +127,6 @@ export function Header() {
             </div>
           </div>
 
-          {/* Cart button */}
-          <Link to="/cart">
-            <Button variant="outline" size="lg" className="relative gap-2">
-              <ShoppingCart className="h-5 w-5" />
-              <span className="hidden sm:inline">السلة</span>
-              {itemCount > 0 && (
-                <Badge className="absolute -top-2 -left-2 h-6 w-6 rounded-full p-0 flex items-center justify-center bg-primary text-primary-foreground">
-                  {itemCount}
-                </Badge>
-              )}
-            </Button>
-          </Link>
 
           {/* Auth button - desktop */}
           {isAuthenticated ? (
