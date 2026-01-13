@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ChevronLeft, FileEdit, Send, Save, FileText } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { Order } from '@/types';
 import { OrderStatusBadge } from './OrderStatusBadge';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { useDraftOrder } from '@/contexts/DraftOrderContext';
 
 interface OrderCardProps {
   order: Order;
@@ -17,6 +18,13 @@ export function OrderCard({ order }: OrderCardProps) {
   const [notes, setNotes] = useState(order.notes || '');
   const [showNotes, setShowNotes] = useState(false);
   const { toast } = useToast();
+  const { setDraftOrder } = useDraftOrder();
+  const navigate = useNavigate();
+
+  const handleEditDraft = () => {
+    setDraftOrder(order);
+    navigate('/');
+  };
 
   const formattedDate = new Date(order.date).toLocaleDateString('en-US', {
     year: 'numeric',
@@ -129,10 +137,10 @@ export function OrderCard({ order }: OrderCardProps) {
               <Button 
                 variant="outline" 
                 className="flex-1 h-12 gap-2"
-                onClick={handleSaveAsDraft}
+                onClick={handleEditDraft}
               >
-                <Save className="h-4 w-4" />
-                حفظ
+                <FileEdit className="h-4 w-4" />
+                تعديل
               </Button>
             </>
           ) : (

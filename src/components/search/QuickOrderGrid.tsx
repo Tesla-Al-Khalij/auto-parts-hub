@@ -1,8 +1,8 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
-import { Plus, Trash2, Package, Keyboard, Copy, Save, Send, FileText, FileSpreadsheet, Eye, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Trash2, Package, Keyboard, Copy, Save, Send, FileText, FileSpreadsheet, Eye, ChevronDown, ChevronUp, AlertCircle, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { mockSuppliers, mockOrders } from '@/data/mockData';
+import { mockSuppliers, mockOrders, mockParts } from '@/data/mockData';
 import { useCachedParts } from '@/hooks/useCachedParts';
 import { Part, Order } from '@/types';
 import { useToast } from '@/hooks/use-toast';
@@ -11,6 +11,8 @@ import { Badge } from '@/components/ui/badge';
 import { ExcelImportDialog } from './ExcelImportDialog';
 import { OrderDetailsDialog } from '@/components/orders/OrderDetailsDialog';
 import { OrderStatusBadge } from '@/components/orders/OrderStatusBadge';
+import { useDraftOrder } from '@/contexts/DraftOrderContext';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Select,
   SelectContent,
@@ -51,6 +53,7 @@ const getSupplierName = (supplierId: string) => {
 
 export function QuickOrderGrid() {
   const { parts } = useCachedParts();
+  const { draftOrder, clearDraftOrder } = useDraftOrder();
   const [lines, setLines] = useState<OrderLine[]>(() => 
     Array.from({ length: 10 }, () => createEmptyLine())
   );
@@ -60,9 +63,60 @@ export function QuickOrderGrid() {
   const [showRecentOrders, setShowRecentOrders] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [orderDetailsOpen, setOrderDetailsOpen] = useState(false);
+  const [editingDraftId, setEditingDraftId] = useState<string | null>(null);
   const { toast } = useToast();
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Load draft order when it changes
+  useEffect(() => {
+    if (draftOrder && draftOrder.isDraft) {
+      // Convert order items to lines
+      const draftLines: OrderLine[] = draftOrder.items.map(item => {
+        // Find the part in our parts list
+        const part = mockParts.find(p => p.partNumber === item.partNumber) || null;
+        const firstSupplier = part?.supplierPrices?.[0];
+        
+        return {
+          id: crypto.randomUUID(),
+          partNumber: item.partNumber,
+          part,
+          quantity: item.quantity,
+          suggestions: [],
+          showSuggestions: false,
+          highlightedIndex: -1,
+          selectedSupplierId: firstSupplier?.supplierId || null,
+          selectedPrice: item.unitPrice || firstSupplier?.price || 0,
+        };
+      });
+
+      // Add empty lines to fill up to 10
+      while (draftLines.length < 10) {
+        draftLines.push(createEmptyLine());
+      }
+
+      setLines(draftLines);
+      setCustomerNotes(draftOrder.notes || '');
+      setEditingDraftId(draftOrder.id);
+      
+      toast({
+        title: 'تم تحميل المسودة',
+        description: `جاري تعديل الطلب ${draftOrder.orderNumber}`,
+      });
+
+      // Clear the draft from context so it doesn't reload
+      clearDraftOrder();
+    }
+  }, [draftOrder, clearDraftOrder, toast]);
+
+  const handleCancelEdit = () => {
+    setEditingDraftId(null);
+    setLines(Array.from({ length: 10 }, () => createEmptyLine()));
+    setCustomerNotes('');
+    toast({
+      title: 'تم إلغاء التعديل',
+    });
+  };
 
   // Add new row at specific position
   const handleAddRowAt = useCallback((index: number) => {
@@ -533,6 +587,27 @@ export function QuickOrderGrid() {
         onImport={handleExcelImport}
         parts={parts}
       />
+
+      {/* Editing Draft Alert */}
+      {editingDraftId && (
+        <Alert className="border-warning bg-warning/10">
+          <AlertCircle className="h-4 w-4 text-warning" />
+          <AlertDescription className="flex items-center justify-between">
+            <span className="text-warning font-medium">
+              أنت تقوم بتعديل مسودة طلب. قم بإجراء التعديلات ثم اضغط إرسال الطلب.
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleCancelEdit}
+              className="gap-1 text-warning hover:text-warning hover:bg-warning/20"
+            >
+              <X className="h-4 w-4" />
+              إلغاء التعديل
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Excel Import & Keyboard shortcuts */}
       <div className="flex items-center justify-between gap-4 flex-wrap">

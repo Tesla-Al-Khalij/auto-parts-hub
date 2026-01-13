@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Package, Search, X, Calendar, Plus, LayoutGrid, Table2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -15,11 +15,16 @@ import { mockOrders } from '@/data/mockData';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { useDraftOrder } from '@/contexts/DraftOrderContext';
+import { Order } from '@/types';
 
 type SortField = 'date' | 'orderNumber' | 'total' | 'itemsCount';
 type SortDirection = 'asc' | 'desc';
 
 export default function Orders() {
+  const navigate = useNavigate();
+  const { setDraftOrder } = useDraftOrder();
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -32,6 +37,11 @@ export default function Orders() {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+
+  const handleEditDraft = (order: Order) => {
+    setDraftOrder(order);
+    navigate('/');
+  };
 
   const clearFilters = () => {
     setSearchQuery('');
@@ -286,6 +296,7 @@ export default function Orders() {
                     sortField={sortField}
                     sortDirection={sortDirection}
                     onSort={handleSort}
+                    onEditDraft={handleEditDraft}
                   />
                 )}
                 

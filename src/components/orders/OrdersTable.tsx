@@ -22,9 +22,10 @@ interface OrdersTableProps {
   sortField?: SortField;
   sortDirection?: SortDirection;
   onSort?: (field: SortField) => void;
+  onEditDraft?: (order: Order) => void;
 }
 
-export function OrdersTable({ orders, startIndex = 0, sortField, sortDirection, onSort }: OrdersTableProps) {
+export function OrdersTable({ orders, startIndex = 0, sortField, sortDirection, onSort, onEditDraft }: OrdersTableProps) {
   const SortIcon = ({ field }: { field: SortField }) => {
     if (sortField !== field) return <ArrowUpDown className="h-4 w-4 mr-1 opacity-50" />;
     return sortDirection === 'asc' 
@@ -109,12 +110,15 @@ export function OrdersTable({ orders, startIndex = 0, sortField, sortDirection, 
                           <Send className="h-4 w-4" />
                           إرسال
                         </Button>
-                        <Link to={`/orders/${order.id}`}>
-                          <Button variant="outline" size="sm" className="h-9 gap-1">
-                            <FileEdit className="h-4 w-4" />
-                            تعديل
-                          </Button>
-                        </Link>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-9 gap-1"
+                          onClick={() => onEditDraft?.(order)}
+                        >
+                          <FileEdit className="h-4 w-4" />
+                          تعديل
+                        </Button>
                       </>
                     ) : (
                       <Link to={`/orders/${order.id}`}>
