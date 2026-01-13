@@ -11,7 +11,8 @@ import {
   Wallet,
   Eye,
   EyeOff,
-  RefreshCw
+  RefreshCw,
+  CreditCard
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
@@ -21,6 +22,7 @@ import { cn } from '@/lib/utils';
 const navItems = [
   { href: '/', label: 'البحث والطلب', icon: Search },
   { href: '/orders', label: 'طلباتي', icon: Package },
+  { href: '/payments', label: 'التحصيل', icon: CreditCard },
   { href: '/account', label: 'كشف الحساب', icon: FileText },
   { href: '/profile', label: 'حسابي', icon: User },
 ];
