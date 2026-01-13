@@ -59,6 +59,7 @@ export function QuickOrderGrid() {
   const [customerNotes, setCustomerNotes] = useState<string>('');
   const [excelDialogOpen, setExcelDialogOpen] = useState(false);
   const [editingDraftId, setEditingDraftId] = useState<string | null>(null);
+  const [isReorderMode, setIsReorderMode] = useState(false);
   const { toast } = useToast();
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -134,6 +135,7 @@ export function QuickOrderGrid() {
       setLines(reorderLines);
       setCustomerNotes(''); // New order, no notes
       setEditingDraftId(null); // Not editing, creating new
+      setIsReorderMode(true); // Show reorder message
 
       // Clear the reorder from context so it doesn't reload
       clearReorderItems();
@@ -619,6 +621,27 @@ export function QuickOrderGrid() {
             >
               <X className="h-4 w-4" />
               إلغاء التعديل
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Reorder Mode Alert */}
+      {isReorderMode && !editingDraftId && (
+        <Alert className="border-primary bg-primary/10">
+          <Package className="h-4 w-4 text-primary" />
+          <AlertDescription className="flex items-center justify-between">
+            <span className="text-primary font-medium">
+              تم تحميل قطع الطلب السابق. يرجى إدخال الكميات المطلوبة لكل قطعة ثم إرسال الطلب.
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsReorderMode(false)}
+              className="gap-1 text-primary hover:text-primary hover:bg-primary/20"
+            >
+              <X className="h-4 w-4" />
+              إغلاق
             </Button>
           </AlertDescription>
         </Alert>
