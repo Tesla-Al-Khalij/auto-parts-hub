@@ -26,6 +26,7 @@ import AdminUserRoles from "./pages/admin/AdminUserRoles";
 import AdminReports from "./pages/admin/AdminReports";
 import AdminSettings from "./pages/admin/AdminSettings";
 import QuickOrder from "./pages/QuickOrder";
+import Payments from "./pages/Payments";
 
 const queryClient = new QueryClient();
 
@@ -49,6 +50,7 @@ const App = () => (
               <Route path="/account" element={<Account />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/install" element={<Install />} />
+              <Route path="/payments" element={<Payments />} />
               {/* Admin Routes */}
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/admin/parts" element={<AdminParts />} />
