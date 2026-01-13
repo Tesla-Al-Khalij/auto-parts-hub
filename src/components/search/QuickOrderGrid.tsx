@@ -449,7 +449,11 @@ export function QuickOrderGrid() {
     if (e.key === 'ArrowUp' && !line.showSuggestions) {
       e.preventDefault();
       if (index > 0) {
-        inputRefs.current[index - 1]?.focus();
+        if (field === 'partNumber') {
+          inputRefs.current[index - 1]?.focus();
+        } else {
+          document.getElementById(`qty-${index - 1}`)?.focus();
+        }
         setFocusedIndex(index - 1);
       }
       return;
@@ -458,16 +462,38 @@ export function QuickOrderGrid() {
     if (e.key === 'ArrowDown' && !line.showSuggestions) {
       e.preventDefault();
       if (index < lines.length - 1) {
-        inputRefs.current[index + 1]?.focus();
+        if (field === 'partNumber') {
+          inputRefs.current[index + 1]?.focus();
+        } else {
+          document.getElementById(`qty-${index + 1}`)?.focus();
+        }
         setFocusedIndex(index + 1);
       } else {
         // Add more rows if at the end
         setLines(prev => [...prev, ...Array.from({ length: 3 }, () => createEmptyLine())]);
         setTimeout(() => {
-          inputRefs.current[index + 1]?.focus();
+          if (field === 'partNumber') {
+            inputRefs.current[index + 1]?.focus();
+          } else {
+            document.getElementById(`qty-${index + 1}`)?.focus();
+          }
           setFocusedIndex(index + 1);
         }, 50);
       }
+      return;
+    }
+    
+    // Arrow Left - move from partNumber to quantity (RTL layout)
+    if (e.key === 'ArrowLeft' && field === 'partNumber' && !line.showSuggestions) {
+      e.preventDefault();
+      document.getElementById(`qty-${index}`)?.focus();
+      return;
+    }
+    
+    // Arrow Right - move from quantity to partNumber (RTL layout)
+    if (e.key === 'ArrowRight' && field === 'quantity') {
+      e.preventDefault();
+      inputRefs.current[index]?.focus();
       return;
     }
     
