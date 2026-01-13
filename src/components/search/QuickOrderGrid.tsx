@@ -937,10 +937,13 @@ export function QuickOrderGrid() {
               id={`qty-${index}`}
               type="number"
               min="0"
-              value={line.quantity === 0 ? '' : line.quantity}
+              value={line.quantity || ''}
               onChange={e => handleQuantityChange(index, e.target.value)}
               onKeyDown={e => handleKeyDown(e, index, 'quantity')}
-              onFocus={() => setFocusedIndex(index)}
+              onFocus={(e) => {
+                setFocusedIndex(index);
+                e.target.select();
+              }}
               placeholder="0"
               className="h-9 text-sm text-center"
             />
